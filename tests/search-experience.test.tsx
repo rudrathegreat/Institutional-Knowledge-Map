@@ -1,10 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SearchExperience } from "@/components/SearchExperience";
 
+const puterAiMocks = vi.hoisted(() => ({
+  interpretQuery: vi.fn(),
+  explainCandidates: vi.fn(),
+}));
+
+vi.mock("@/lib/puter-ai", () => puterAiMocks);
+
+beforeEach(() => {
+  puterAiMocks.interpretQuery.mockRejectedValue(new Error("sign-in cancelled"));
+  puterAiMocks.explainCandidates.mockImplementation(
+    async (_query, candidates) => candidates,
+  );
+});
+
 afterEach(() => {
+  vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -41,12 +56,20 @@ describe("SearchExperience", () => {
           results: [
             {
               id: "researcher_002",
+              slug: "daniel-brooks",
               name: "Daniel Brooks",
               title: "Research Fellow",
               role: "Radio Astronomer",
               researchAreas: ["pulsars", "radio astronomy"],
               reason:
                 "Their stored profile includes MeerKAT, matching your search.",
+              evidence: {
+                biography: "Daniel studies radio signals.",
+                methods: ["scintillation analysis"],
+                instruments: ["MeerKAT"],
+                software: ["PSRCHIVE"],
+                keywords: ["scintillation"],
+              },
             },
           ],
         }),
@@ -59,10 +82,132 @@ describe("SearchExperience", () => {
     await user.type(input, "MeerKAT{enter}");
 
     expect(await screen.findByText("Daniel Brooks")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Daniel Brooks" })).toHaveAttribute(
+      "href",
+      "/people/daniel-brooks",
+    );
     expect(screen.getByText("1 relevant person")).toBeInTheDocument();
     expect(
       screen.getByText("Why this person may be relevant"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/AI interpretation was unavailable/),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a valid interpretation, topics, and grounded AI explanation", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        interpretedTopics: [],
+        results: [
+          {
+            id: "researcher_006",
+            slug: "aisha-rahman",
+            name: "Aisha Rahman",
+            title: "Postdoctoral Researcher",
+            role: "Fast Radio Burst Astronomer",
+            researchAreas: ["fast radio bursts"],
+            reason: "Deterministic reason.",
+            evidence: {
+              biography: "Aisha searches for fast radio bursts.",
+              methods: ["dedispersion"],
+              instruments: ["ASKAP"],
+              software: ["PRESTO"],
+              keywords: ["FRB"],
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      interpretation: "Finding specialists in brief radio signals.",
+      interpretedTopics: ["Radio transients", "Signal detection"],
+      searchTerms: ["fast radio bursts", "dedispersion"],
+    });
+    puterAiMocks.explainCandidates.mockImplementation(
+      async (_query, candidates) => [
+        { ...candidates[0], reason: "Her stored profile covers burst searches." },
+      ],
+    );
+
+    render(
+      <SearchExperience
+        expertiseVocabulary={["fast radio bursts", "dedispersion"]}
+      />,
+    );
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "a brief signal from far away{enter}",
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "How your search was interpreted",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Finding specialists in brief radio signals."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Radio transients")).toBeInTheDocument();
+    expect(screen.getByText("Signal detection")).toBeInTheDocument();
+    expect(
+      screen.getByText("Her stored profile covers burst searches."),
+    ).toBeInTheDocument();
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      query: "a brief signal from far away",
+      interpretedTerms: ["fast radio bursts", "dedispersion"],
+    });
+  });
+
+  it("keeps deterministic reasons when the explanation call fails", async () => {
+    const user = userEvent.setup();
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      interpretation: "Finding pulsar specialists.",
+      interpretedTopics: ["Pulsars"],
+      searchTerms: ["pulsars"],
+    });
+    puterAiMocks.explainCandidates.mockRejectedValue(new Error("quota exhausted"));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          interpretedTopics: [],
+          results: [
+            {
+              id: "researcher_001",
+              slug: "maya-chen",
+              name: "Maya Chen",
+              title: "Senior Research Fellow",
+              role: "Pulsar Astronomer",
+              researchAreas: ["pulsars"],
+              reason: "Their stored profile includes pulsars.",
+              evidence: {
+                biography: "Maya studies pulsars.",
+                methods: ["pulsar timing"],
+                instruments: ["MeerKAT"],
+                software: ["TEMPO2"],
+                keywords: ["timing noise"],
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars"]} />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "pulsar work{enter}",
+    );
+
+    expect(
+      await screen.findByText("Their stored profile includes pulsars."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/AI explanations were unavailable/)).toBeInTheDocument();
   });
 
   it("renders the documented empty-results guidance", async () => {

@@ -31,8 +31,16 @@ describe("database seeding", () => {
 
     expect(rows).toHaveLength(MOCK_RESEARCHER_COUNT);
     expect(rows.every((row) => row.name && row.searchDocument)).toBe(true);
+    expect(rows.every((row) => row.slug.length > 0)).toBe(true);
+    expect(new Set(rows.map((row) => row.slug)).size).toBe(
+      MOCK_RESEARCHER_COUNT,
+    );
     expect(rows.every((row) => row.researchAreas.length > 0)).toBe(true);
     expect(rows.every((row) => row.embedding === null)).toBe(true);
+    expect(rows.every((row) => row.biography.length >= 250)).toBe(true);
+    expect(new Set(rows.map((row) => row.biography)).size).toBe(
+      MOCK_RESEARCHER_COUNT,
+    );
   });
 
   it("re-seeds the same IDs and records deterministically", () => {

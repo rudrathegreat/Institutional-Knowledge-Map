@@ -1,8 +1,8 @@
 # Institutional Expertise Navigator
 
-A minimal institutional search interface that answers one question: **Who should I talk to?**
+A focused institutional expertise directory that helps users answer one question: **Who should I talk to?**
 
-This first milestone provides server-side lexical search over a deterministic SQLite database containing 30 fictional astronomy researchers. Semantic retrieval, embeddings, and AI-generated explanations are intentionally deferred.
+The application provides Puter-assisted natural-language search, an alphabetical people directory, and detailed person profiles backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary and generates evidence-grounded match explanations; deterministic lexical search remains available whenever AI is unavailable.
 
 ## Run locally
 
@@ -13,6 +13,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The first AI-assisted search may prompt the user to sign in to Puter. AI usage is charged to that user's Puter account under Puter's user-pays model; no application API key is required. Cancelling sign-in, exhausting an allowance, or encountering a model error simply falls back to directory-keyword search.
 
 On Windows PowerShell systems that block npm's PowerShell wrapper, use the equivalent `npm.cmd` commands.
 
@@ -28,15 +30,30 @@ npm run build       # Create a production build
 
 Set `DATABASE_PATH` to use a different SQLite file. The browser never receives direct database access.
 
+Copy `.env.example` to `.env.local` only if you need to override the public Puter model configuration. The default and recommended value is:
+
+```text
+NEXT_PUBLIC_PUTER_AI_MODEL=google/gemini-3.1-flash-lite
+```
+
+The application always supplies an explicit model and temperature of zero. OpenAI-prefixed configuration is rejected and causes lexical fallback instead of allowing Puter.js to select a default model.
+
 ## Current scope
 
 - One responsive, accessible search screen
 - Exact-name and weighted keyword retrieval
+- Controlled, database-derived expertise vocabulary
+- Browser-side Puter query interpretation using an explicit Google Gemini model
+- Weighted query expansion (`raw lexical score + 0.35 × expanded-term score`)
 - Search across names, roles, biographies, research areas, methods, instruments, software, and keywords
-- Ranked database-backed people results with deterministic relevance reasons
+- Ranked database-backed people results with grounded AI reasons and deterministic fallbacks
+- Twenty searches per IP per minute on the SQLite search endpoint
+- Persistent Search and People navigation
+- Alphabetical directory of every stored researcher
+- Stable, human-readable profile URLs with detailed expertise information
 - Loading, validation, error, and empty-result states
-- Repository-controlled fictional seed data
+- Repository-controlled fictional seed data with 30 detailed biographies
 
-The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, profile pages, filters, authentication, semantic search, and generative AI are not included in this milestone.
+The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, directory filters, related-people recommendations, application-managed authentication, embeddings, and vector databases are not included in this milestone.
 
 All researcher identities and biographies in the seed data are fictional. Any resemblance to a real person is coincidental.

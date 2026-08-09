@@ -8,10 +8,12 @@ The system only needs to:
 
 1. store mock researcher records;
 2. accept a search query;
-3. perform lexical and semantic retrieval;
+3. use browser-side AI to map ordinary language to controlled expertise terms;
 4. rank matching researchers;
-5. optionally ask an LLM to explain the matches;
+5. optionally ask Puter AI in the browser to explain the matches;
 6. return the results.
+7. list researchers for directory browsing;
+8. return one researcher profile by stable slug.
 
 No ingestion system, MCP server, vector database, graph database, agent framework, or separate backend service is required.
 
@@ -32,7 +34,7 @@ No ingestion system, MCP server, vector database, graph database, agent framewor
                    Search service
                   /              \
                  /                \
-        lexical retrieval    semantic retrieval
+        lexical retrieval    Puter term selection
                  \                /
                   \              /
                    merged ranking
@@ -41,7 +43,7 @@ No ingestion system, MCP server, vector database, graph database, agent framewor
                  candidate people
                           │
                           ▼
-                    optional LLM
+             optional Puter explanation
                           │
                           ▼
                  relevance reasons
@@ -63,8 +65,8 @@ Recommended stack:
 - React
 - SQLite
 - Drizzle ORM or similarly lightweight ORM
-- OpenAI API for embeddings
-- OpenAI API for optional result explanation
+- `@heyputer/puter.js`, dynamically imported in the browser
+- explicit `google/gemini-3.1-flash-lite` model selection
 
 Do not create a separate backend application.
 
@@ -89,8 +91,8 @@ institutional-expertise-navigator/
 ├── lib/
 │   ├── db.ts
 │   ├── search.ts
-│   ├── embeddings.ts
-│   └── ai.ts
+│   ├── search-text.ts
+│   └── puter-ai.ts
 │
 ├── data/
 │   └── researchers.json
@@ -102,7 +104,7 @@ institutional-expertise-navigator/
 └── tests/
 ```
 
-No additional application surfaces are required.
+The only secondary application surfaces are the people directory and database-backed person profiles.
 
 ---
 
@@ -120,6 +122,7 @@ Recommended fields:
 
 ```text
 id
+slug
 name
 title
 role
@@ -133,6 +136,8 @@ search_document
 embedding_json
 ```
 
+`embedding_json` remains nullable for schema compatibility and is deliberately unused. Seeded rows store `null`; this architecture does not generate or compare vectors.
+
 A single table is acceptable for the MVP.
 
 Normalisation into multiple tables is not required unless it significantly simplifies implementation.
@@ -141,7 +146,7 @@ Normalisation into multiple tables is not required unless it significantly simpl
 
 ## 6. Search Document
 
-Each researcher should have one normalised text representation used for semantic retrieval.
+Each researcher has one normalised text representation used for deterministic lexical retrieval.
 
 Example:
 
@@ -155,7 +160,7 @@ Software: Python, TEMPO2.
 Biography: ...
 ```
 
-This text is embedded once and stored with the researcher.
+The same structured fields also produce the controlled expertise vocabulary sent to the search client. Names and biography prose are not vocabulary entries.
 
 ---
 
@@ -175,32 +180,25 @@ A seed command populates SQLite:
 npm run db:seed
 ```
 
-The seed process should insert researcher records and their stored embeddings.
-
-Embeddings may either be:
-
-- pre-generated and included with the mock seed data; or
-- generated through an explicit seed command.
-
-The application must not regenerate every researcher embedding on startup.
+The seed process inserts researcher records deterministically with `embedding_json` set to `null`. Seeding performs no AI or network calls.
 
 ---
 
 ## 8. Search Architecture
 
-The MVP uses hybrid retrieval.
+The MVP uses deterministic lexical retrieval augmented by controlled query expansion.
 
 ```text
                        QUERY
                          │
              ┌───────────┴───────────┐
              ▼                       ▼
-       lexical search          semantic search
+       raw lexical search      expanded-term search
              │                       │
- name / topic / fields        query embedding
+ name / topic / fields        validated vocabulary terms
              │                       │
              ▼                       ▼
-       lexical score          cosine similarity
+       lexical score          accumulated term score
              │                       │
              └───────────┬───────────┘
                          ▼
@@ -234,30 +232,30 @@ A query such as:
 Ryan Shannon
 ```
 
-must not depend on semantic search or an LLM.
+must not depend on Puter query expansion or an LLM.
 
 SQLite text search, simple indexed queries, or lightweight application-level matching are all acceptable for the small dataset.
 
 ---
 
-## 10. Semantic Retrieval
+## 10. Puter-Assisted Controlled Query Expansion
 
-Semantic retrieval exists for natural-language questions and vocabulary mismatch.
+Puter-assisted interpretation exists for natural-language questions and vocabulary mismatch. Puter.js is loaded dynamically only in the browser and may trigger Puter's website authentication flow.
 
 Flow:
 
 ```text
 user query
     ↓
-embedding API
+Puter chat with explicit Gemini model
     ↓
-query vector
+JSON interpretation and proposed vocabulary terms
     ↓
-compare against stored researcher embeddings
+discard terms absent from the server-derived vocabulary
     ↓
-cosine similarity
+submit the original query and validated terms
     ↓
-semantic ranking
+deterministic expanded-term ranking
 ```
 
 For 25–40 researchers, vector similarity should be calculated directly in application code.
@@ -275,14 +273,14 @@ Combine:
 - exact-name matching;
 - lexical field matches;
 - exact expertise/topic matches;
-- semantic similarity.
+- accumulated evidence from validated expansion terms at 35% weight.
 
 The exact formula may be tuned during development.
 
 A reasonable starting approach is:
 
 ```text
-semantic similarity
+validated expanded-term evidence
 + lexical relevance
 + exact field boosts
 + strong exact-name boost
@@ -296,25 +294,25 @@ Do not expose numerical relevance scores to users.
 
 ### Core rule
 
-The LLM does not retrieve researchers.
+Puter does not create or directly retrieve researcher records. It may propose only terms from the supplied vocabulary; the server validates those terms again and SQLite remains the identity source of truth.
 
-The application retrieves researchers first.
+The browser may interpret a query into controlled terms before retrieval. The explanation call always happens after the server has retrieved the candidate records.
 
 ```text
-query
+query + server-derived vocabulary
   ↓
-search service
+Puter interpretation (optional)
   ↓
-SQLite
+POST original query + validated terms
+  ↓
+SQLite deterministic ranking
   ↓
 top candidate researchers
   ↓
-LLM
-  ↓
-short grounded explanations
+Puter grounded explanations (optional)
 ```
 
-The model receives only:
+The explanation call receives only:
 
 - the original user query;
 - the small candidate set;
@@ -322,7 +320,7 @@ The model receives only:
 
 ---
 
-## 13. LLM Output
+## 13. Puter Output
 
 Use structured output.
 
@@ -330,10 +328,19 @@ Example:
 
 ```json
 {
-  "interpreted_topics": [
+  "interpretation": "Finding people who study pulsars and propagation effects.",
+  "interpretedTopics": [
     "pulsars",
     "interstellar scintillation"
   ],
+  "searchTerms": ["pulsars", "scintillation analysis"]
+}
+```
+
+The separate explanation response is:
+
+```json
+{
   "recommendations": [
     {
       "researcher_id": "researcher_017",
@@ -343,7 +350,7 @@ Example:
 }
 ```
 
-The server validates this output before returning it to the client.
+The browser validates this output with Zod before rendering it.
 
 The model cannot introduce new researcher IDs.
 
@@ -351,14 +358,14 @@ The model cannot introduce new researcher IDs.
 
 ## 14. AI Failure Behaviour
 
-The AI explanation layer is optional to successful retrieval.
+Both Puter calls are optional to successful retrieval.
 
-If the LLM fails:
+If Puter fails:
 
 ```text
 query
   ↓
-hybrid retrieval
+deterministic lexical retrieval
   ↓
 candidate researchers
   ↓
@@ -367,7 +374,7 @@ display candidates without generated explanation
 
 The core search experience must still work.
 
-If embedding generation fails, the system should fall back to lexical retrieval where possible.
+If Puter authentication is cancelled, allowance is exhausted, the configured model is unavailable, or either call fails, the application uses raw lexical results and deterministic evidence-based reasons.
 
 ---
 
@@ -383,7 +390,8 @@ Input:
 
 ```json
 {
-  "query": "Who knows about pulsar scintillation?"
+  "query": "Who knows about pulsar scintillation?",
+  "interpretedTerms": ["pulsars", "scintillation analysis"]
 }
 ```
 
@@ -391,10 +399,7 @@ Response:
 
 ```json
 {
-  "interpretedTopics": [
-    "pulsars",
-    "interstellar scintillation"
-  ],
+  "interpretedTopics": [],
   "results": [
     {
       "id": "researcher_017",
@@ -404,13 +409,20 @@ Response:
         "pulsars",
         "radio astronomy"
       ],
-      "reason": "Their stored profile includes work on pulsars and interstellar scintillation."
+      "reason": "Their stored profile includes pulsars and scintillation, matching your search.",
+      "evidence": {
+        "biography": "...",
+        "methods": ["scintillation analysis"],
+        "instruments": ["MeerKAT"],
+        "software": ["PSRCHIVE"],
+        "keywords": ["scintillation"]
+      }
     }
   ]
 }
 ```
 
-No other public API surface is required for the MVP.
+No additional JSON API is required. Directory and profile pages read SQLite directly from server components.
 
 ---
 
@@ -450,7 +462,7 @@ Do not use:
 
 The MVP dataset is too small to justify this complexity.
 
-Store embeddings with researcher records in SQLite and calculate similarity in application code.
+Keep the nullable embedding column for compatibility, but leave it unused. No vector infrastructure or similarity calculation is part of this design.
 
 ---
 
@@ -480,9 +492,9 @@ The complete MVP architecture is:
            │
            ▼
 ┌─────────────────────┐
-│ Hybrid Search       │
+│ Deterministic Search│
 │                     │
-│ lexical + semantic  │
+│ raw + expanded terms│
 └──────────┬──────────┘
            │
            ▼
@@ -490,12 +502,12 @@ The complete MVP architecture is:
 │ SQLite              │
 │                     │
 │ researchers         │
-│ embeddings          │
+│ embedding is null   │
 └──────────┬──────────┘
            │
            ▼
 ┌─────────────────────┐
-│ Optional LLM        │
+│ Browser Puter AI    │
 │ explanation         │
 └──────────┬──────────┘
            │
@@ -507,6 +519,6 @@ The complete MVP architecture is:
 
 The runtime principle is:
 
-> **retrieve first, explain second.**
+> **interpret terms, retrieve deterministically, explain only retrieved people.**
 
 The MVP should remain this simple until evidence shows that more infrastructure is necessary.

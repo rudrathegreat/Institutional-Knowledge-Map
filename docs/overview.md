@@ -1,4 +1,4 @@
-# Institutional Expertise Navigator — Minimal MVP Overview
+# Institutional Expertise Navigator — Product Overview
 
 ## 1. Product Summary
 
@@ -10,9 +10,7 @@ A user enters a name, topic, method, instrument, software term, or natural-langu
 
 The system returns a short list of relevant people and explains why each person may be useful to approach.
 
-That is the entire MVP.
-
-The MVP is intended to prove whether natural-language expertise search is useful before any broader product features are built.
+Users can also browse the complete people directory and open a profile containing the stored evidence behind each person's expertise.
 
 ---
 
@@ -54,7 +52,7 @@ The MVP uses the same interface for both.
 
 ## 5. The Entire User Experience
 
-The application has one main screen.
+The application has a primary search screen plus a lightweight people directory and person profiles, connected by persistent Search and People navigation.
 
 ```text
                 Who should I talk to?
@@ -118,12 +116,14 @@ The MVP contains only the following product features:
 
 1. One unified search bar.
 2. Traditional lexical search.
-3. Semantic search using embeddings.
-4. Hybrid ranking combining lexical and semantic signals.
+3. Puter-assisted interpretation into a controlled expertise vocabulary.
+4. Deterministic ranking combining the raw query with validated expanded terms.
 5. Search results containing relevant people.
 6. Short AI-generated explanations of why each returned person may be relevant.
 7. Graceful fallback to non-AI search results when AI explanation generation fails.
-8. Mock researcher data stored in a simple relational database.
+8. An alphabetical directory of all stored researchers.
+9. Detailed person profiles linked from the directory and search results.
+10. Mock researcher data stored in a simple relational database.
 
 ---
 
@@ -145,7 +145,7 @@ Use strong lexical/name matching.
 pulsars
 ```
 
-Use lexical matching plus semantic retrieval.
+Use raw lexical matching plus Puter-assisted controlled query expansion.
 
 ### Method, instrument, or software search
 
@@ -164,7 +164,7 @@ My pulse arrival times seem to drift and I do not know what type of
 analysis I should be looking at.
 ```
 
-Use semantic retrieval to find researchers whose stored expertise is related.
+Ask Puter to select related terms from the directory vocabulary, then let the server validate and rank those terms deterministically.
 
 ---
 
@@ -172,12 +172,12 @@ Use semantic retrieval to find researchers whose stored expertise is related.
 
 The AI layer is deliberately narrow.
 
-The AI may:
+Puter AI may:
 
 - interpret a complex natural-language query;
 - explain why retrieved people are relevant.
 
-The AI must not:
+Puter AI must not:
 
 - answer the scientific question;
 - invent people;
@@ -190,6 +190,8 @@ The AI must not:
 The retrieval system chooses the candidate people.
 
 The LLM only interprets and explains.
+
+Puter.js runs only in the browser with the explicit `google/gemini-3.1-flash-lite` model at temperature zero. Puter may prompt users to sign in, and AI usage is funded by their Puter account. If sign-in is cancelled or AI is otherwise unavailable, the same screen continues with raw lexical search and deterministic reasons.
 
 ---
 
@@ -213,7 +215,7 @@ Each researcher should contain fields such as:
 - software;
 - keywords;
 - searchable profile text;
-- embedding.
+- a nullable, unused embedding compatibility field.
 
 ---
 
@@ -223,9 +225,7 @@ The following must not be implemented in the MVP.
 
 ### Additional product surfaces
 
-- people directory;
-- researcher profile pages;
-- raw profile pages;
+- related-people recommendations;
 - researcher maps;
 - network graphs;
 - topic maps;
@@ -298,7 +298,9 @@ The MVP is successful if it can reliably demonstrate:
 5. returning plausible people;
 6. explaining the relevance of those people using stored profile evidence;
 7. continuing to return basic results if the explanation model fails;
-8. never answering the user's research question instead of routing them to a person.
+8. never answering the user's research question instead of routing them to a person;
+9. browsing every stored person alphabetically;
+10. opening the same detailed person profile from either browsing or search.
 
 ---
 
@@ -315,9 +317,9 @@ Rank them
     ↓
 Explain why they may be relevant
     ↓
-Display results
+Display results or browse people
+    ↓
+Open a grounded person profile
 ```
-
-Nothing else is required.
 
 The product should feel like an intelligent institutional search engine, not an AI assistant.

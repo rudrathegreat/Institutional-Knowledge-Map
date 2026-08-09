@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Expertise Navigator",
+  title: {
+    default: "Expertise Navigator",
+    template: "%s | Expertise Navigator",
+  },
   description: "Find the right researcher to talk to.",
 };
 
@@ -14,7 +20,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        <div className="siteContent">{children}</div>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

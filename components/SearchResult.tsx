@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { SearchResultPayload } from "@/lib/api-types";
 
 interface SearchResultProps {
@@ -8,7 +10,9 @@ export function SearchResult({ result }: SearchResultProps) {
   return (
     <article className="searchResult">
       <header className="resultHeader">
-        <h2>{result.name}</h2>
+        <h2>
+          <Link href={`/people/${result.slug}`}>{result.name}</Link>
+        </h2>
         <p>
           {result.title}
           <span aria-hidden="true"> · </span>

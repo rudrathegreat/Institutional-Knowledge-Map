@@ -2,6 +2,7 @@ import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const researchers = sqliteTable("researchers", {
   id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   title: text("title").notNull(),
   role: text("role").notNull(),

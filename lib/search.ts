@@ -1,6 +1,9 @@
 import type { Researcher } from "@/db/schema";
 import { researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
+import { normalizeSearchText } from "@/lib/search-text";
+
+export { normalizeSearchText } from "@/lib/search-text";
 
 const STOP_WORDS = new Set([
   "a",
@@ -30,15 +33,28 @@ const STOP_WORDS = new Set([
 ]);
 
 export const MAX_QUERY_LENGTH = 2_000;
+export const MAX_INTERPRETED_TERMS = 12;
+export const MAX_INTERPRETED_TERM_LENGTH = 100;
+export const EXPANDED_TERM_WEIGHT = 0.35;
 export const RESULT_LIMIT = 5;
+
+export interface SearchEvidence {
+  biography: string;
+  methods: string[];
+  instruments: string[];
+  software: string[];
+  keywords: string[];
+}
 
 export interface SearchResult {
   id: string;
+  slug: string;
   name: string;
   title: string;
   role: string;
   researchAreas: string[];
   reason: string;
+  evidence: SearchEvidence;
 }
 
 interface RankedResearcher {
@@ -49,16 +65,6 @@ interface RankedResearcher {
   exactNameMatch: boolean;
 }
 
-export function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9+#.-]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
 function getQueryTokens(normalizedQuery: string): string[] {
   const allTokens = [...new Set(normalizedQuery.split(" ").filter(Boolean))];
   const meaningfulTokens = allTokens.filter(
@@ -66,10 +72,6 @@ function getQueryTokens(normalizedQuery: string): string[] {
   );
 
   return meaningfulTokens.length > 0 ? meaningfulTokens : allTokens;
-}
-
-function containsToken(value: string, token: string): boolean {
-  return normalizeSearchText(value).includes(token);
 }
 
 function rankResearcher(
@@ -168,7 +170,7 @@ function rankResearcher(
   }
 
   for (const token of tokens) {
-    if (containsToken(researcher.biography, token)) {
+    if (normalizedBiography.includes(token)) {
       score += 3;
       biographyMatched = true;
     }
@@ -209,9 +211,62 @@ function buildReason(ranked: RankedResearcher): string {
   return "Their stored profile contains terms that match your search.";
 }
 
+function getVocabularyValues(researcher: Researcher): string[] {
+  return [
+    researcher.title,
+    researcher.role,
+    ...researcher.researchAreas,
+    ...researcher.methods,
+    ...researcher.instruments,
+    ...researcher.software,
+    ...researcher.keywords,
+  ];
+}
+
+export function buildExpertiseVocabulary(records: Researcher[]): string[] {
+  const valuesByNormalizedTerm = new Map<string, string>();
+
+  for (const researcher of records) {
+    for (const value of getVocabularyValues(researcher)) {
+      const trimmedValue = value.trim();
+      const normalizedValue = normalizeSearchText(trimmedValue);
+
+      if (normalizedValue && !valuesByNormalizedTerm.has(normalizedValue)) {
+        valuesByNormalizedTerm.set(normalizedValue, trimmedValue);
+      }
+    }
+  }
+
+  return [...valuesByNormalizedTerm.values()].sort((left, right) =>
+    left.localeCompare(right),
+  );
+}
+
+export function validateInterpretedTerms(
+  records: Researcher[],
+  terms: string[],
+): string[] {
+  const vocabulary = new Map(
+    buildExpertiseVocabulary(records).map((term) => [normalizeSearchText(term), term]),
+  );
+  const validTerms = new Map<string, string>();
+
+  for (const term of terms.slice(0, MAX_INTERPRETED_TERMS)) {
+    const normalizedTerm = normalizeSearchText(term);
+    const vocabularyTerm = vocabulary.get(normalizedTerm);
+
+    if (vocabularyTerm && !validTerms.has(normalizedTerm)) {
+      validTerms.set(normalizedTerm, vocabularyTerm);
+    }
+  }
+
+  return [...validTerms.values()];
+}
+
 export function rankResearchers(
   records: Researcher[],
   query: string,
+  interpretedTerms: string[] = [],
 ): SearchResult[] {
   const normalizedQuery = normalizeSearchText(query);
 
@@ -219,13 +274,44 @@ export function rankResearchers(
     return [];
   }
 
-  const tokens = getQueryTokens(normalizedQuery);
+  const validInterpretedTerms = validateInterpretedTerms(records, interpretedTerms);
+  const queryTokens = getQueryTokens(normalizedQuery);
 
   return records
-    .map((researcher) => rankResearcher(researcher, normalizedQuery, tokens))
+    .map((researcher) => {
+      const rawRank = rankResearcher(researcher, normalizedQuery, queryTokens);
+      const matchedEvidence = new Map(
+        rawRank.matchedEvidence.map((value) => [normalizeSearchText(value), value]),
+      );
+      let expandedScore = 0;
+      let expandedFieldCount = 0;
+
+      for (const term of validInterpretedTerms) {
+        const normalizedTerm = normalizeSearchText(term);
+        const expandedRank = rankResearcher(
+          researcher,
+          normalizedTerm,
+          getQueryTokens(normalizedTerm),
+        );
+        expandedScore += expandedRank.score;
+        expandedFieldCount += expandedRank.matchedFieldCount;
+
+        for (const value of expandedRank.matchedEvidence) {
+          matchedEvidence.set(normalizeSearchText(value), value);
+        }
+      }
+
+      return {
+        ...rawRank,
+        score: rawRank.score + EXPANDED_TERM_WEIGHT * expandedScore,
+        matchedFieldCount: rawRank.matchedFieldCount + expandedFieldCount,
+        matchedEvidence: [...matchedEvidence.values()],
+      };
+    })
     .filter((ranked) => ranked.score > 0)
     .sort(
       (left, right) =>
+        Number(right.exactNameMatch) - Number(left.exactNameMatch) ||
         right.score - left.score ||
         right.matchedFieldCount - left.matchedFieldCount ||
         left.researcher.name.localeCompare(right.researcher.name),
@@ -233,15 +319,31 @@ export function rankResearchers(
     .slice(0, RESULT_LIMIT)
     .map((ranked) => ({
       id: ranked.researcher.id,
+      slug: ranked.researcher.slug,
       name: ranked.researcher.name,
       title: ranked.researcher.title,
       role: ranked.researcher.role,
       researchAreas: ranked.researcher.researchAreas,
       reason: buildReason(ranked),
+      evidence: {
+        biography: ranked.researcher.biography,
+        methods: ranked.researcher.methods,
+        instruments: ranked.researcher.instruments,
+        software: ranked.researcher.software,
+        keywords: ranked.researcher.keywords,
+      },
     }));
 }
 
-export function searchResearchers(query: string): SearchResult[] {
+export function getExpertiseVocabulary(): string[] {
   const records = getDatabase().select().from(researchers).all();
-  return rankResearchers(records, query);
+  return buildExpertiseVocabulary(records);
+}
+
+export function searchResearchers(
+  query: string,
+  interpretedTerms: string[] = [],
+): SearchResult[] {
+  const records = getDatabase().select().from(researchers).all();
+  return rankResearchers(records, query, interpretedTerms);
 }

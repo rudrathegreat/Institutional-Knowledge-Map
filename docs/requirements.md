@@ -2,11 +2,11 @@
 
 ## 1. Scope
 
-The MVP contains one user workflow:
+The product contains two complementary user workflows:
 
 > **Enter a query and receive relevant people with concise, grounded explanations.**
 
-There are no secondary pages or major product features.
+> **Browse all people and open a detailed profile grounded in stored researcher data.**
 
 ---
 
@@ -60,27 +60,26 @@ Searchable fields must include:
 
 ---
 
-## FR-003 — Semantic Search
+## FR-003 — Puter-Assisted Natural-Language Search
 
-The application must support semantic retrieval.
+The browser may ask Puter to interpret an ordinary-language query into terms selected from a server-derived expertise vocabulary. The model must be explicitly configured as `google/gemini-3.1-flash-lite` with temperature zero.
 
-Each researcher must have a stored embedding derived from their searchable profile representation.
-
-A user query must be embeddable and compared with researcher embeddings.
+The vocabulary must be derived from stored titles, roles, research areas, methods, instruments, software, and keywords. Proposed terms must be validated in both browser and server trust boundaries.
 
 ### Acceptance tests
 
-- A natural-language query with limited exact keyword overlap can still retrieve a semantically relevant researcher.
-- Similarity is calculated without a dedicated vector database.
-- Semantic search uses stored researcher embeddings rather than regenerating all researcher embeddings per request.
+- A natural-language query with limited exact keyword overlap can still retrieve a relevant researcher through controlled expansion.
+- Unknown and duplicate terms are discarded.
+- Malformed or non-JSON Puter output is not submitted as interpreted terms.
+- Search continues with the raw query when Puter is unavailable.
 
 ---
 
 ## FR-004 — Hybrid Ranking
 
-The application must combine lexical and semantic evidence.
+The application must combine raw-query lexical evidence with validated expanded-term evidence.
 
-Exact researcher-name matches must receive stronger priority than semantic matches.
+Exact researcher-name matches must always precede expansion matches. Expanded-term scores contribute at `0.35 ×` their accumulated lexical score.
 
 ### Acceptance tests
 
@@ -111,17 +110,17 @@ Each result must include at minimum:
 
 ## FR-006 — AI Relevance Explanation
 
-The system may send retrieved candidate researchers to the LLM.
+The browser may send retrieved candidate researchers to Puter.
 
-The LLM must return structured output containing:
+Puter must return structured JSON containing:
 
 - researcher ID;
 - concise relevance reason;
-- optional interpreted query topics.
+- interpreted query topics are produced by the separate pre-retrieval interpretation call and remain in browser state.
 
 ### Acceptance tests
 
-- The LLM can only reference candidate researcher IDs supplied by the server.
+- Puter can only reference candidate researcher IDs supplied by the server.
 - Returned IDs are validated before display.
 - Explanations must be based on stored researcher evidence.
 - Invalid model output is handled without crashing the search flow.
@@ -178,7 +177,8 @@ The command must create or refresh the local SQLite database from mock data.
 
 - A fresh checkout can seed the database successfully.
 - Seeded researchers have all fields required by search.
-- Stored researcher embeddings are available after seeding.
+- All 30 fictional biographies are unique, contain three detailed sentences, and are at least 250 characters.
+- The compatibility embedding column remains `null` after seeding.
 
 ---
 
@@ -189,8 +189,35 @@ Search must degrade gracefully.
 ### Acceptance tests
 
 - If the explanation model fails, retrieved people are still shown.
-- If semantic embedding generation fails, lexical search is attempted.
+- If Puter query interpretation fails, raw lexical search is attempted.
+- If Puter explanation generation fails, deterministic reasons remain visible.
+- Cancelling Puter authentication, exhausting allowance, or selecting an unavailable model does not crash search.
 - AI provider failure does not crash the application.
+
+---
+
+## FR-011 — People Directory
+
+The application must provide an alphabetical directory containing every stored researcher. Each entry must show the person's name, title, role, and research areas and link to their profile.
+
+### Acceptance tests
+
+- The directory contains all seeded researchers exactly once.
+- People are ordered alphabetically by their stored display name.
+- Every directory entry links to a valid person profile.
+
+---
+
+## FR-012 — Person Profiles
+
+Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, biography, research areas, methods, instruments, software, and keywords. Search-result names must link to the same profiles.
+
+### Acceptance tests
+
+- Valid slugs resolve to the matching database researcher.
+- Unknown slugs return a controlled 404 page.
+- Profile metadata identifies the person.
+- Slugs remain unique and deterministic across reseeding.
 
 ---
 
@@ -210,19 +237,15 @@ For up to 500 researchers:
 
 ---
 
-## PR-003 — Semantic Similarity
+## PR-003 — Expanded-Term Ranking
 
-For up to 500 stored embeddings:
-
-- similarity computation should target <100 ms after the query embedding has been obtained.
+For up to 500 researcher records, server-side validation and expanded-term ranking should target <100 ms excluding network transport.
 
 ---
 
 ## PR-004 — Search Without LLM Explanation
 
-Under normal embedding API conditions:
-
-- semantic search results should target <2 seconds end-to-end.
+Without a successful Puter call, lexical search results should target <2 seconds end-to-end.
 
 ---
 
@@ -276,14 +299,11 @@ Search API errors must return structured error responses rather than unhandled e
 
 # 5. Security Requirements
 
-## SR-001 — API Keys
+## SR-001 — Puter User-Pays Access
 
-AI and embedding API keys must:
+The application must not store or proxy an AI-provider key. Puter website authentication and usage are associated with the user's Puter account under the user-pays model.
 
-- remain server-side;
-- use environment variables;
-- never be committed;
-- never be sent to the browser.
+`NEXT_PUBLIC_PUTER_AI_MODEL` is public configuration, not a secret. OpenAI-prefixed values must disable AI assistance rather than falling back to Puter's default model.
 
 ---
 
@@ -297,14 +317,14 @@ The browser must not receive database credentials or direct filesystem access.
 
 ## SR-003 — LLM Isolation
 
-The LLM must not receive:
+Puter must not receive:
 
 - database credentials;
 - arbitrary SQL capability;
 - unrestricted database access;
 - arbitrary application tools.
 
-It receives only the user query and selected candidate records.
+The interpretation call receives only the query and controlled vocabulary. The explanation call receives only the query and up to five selected candidate records.
 
 ---
 
@@ -329,7 +349,7 @@ Recommended maximum query length:
 
 ## SR-005 — Output Validation
 
-LLM structured output must be schema validated.
+Puter structured output must be schema validated with Zod after `JSON.parse`.
 
 Any returned researcher ID that is not in the supplied candidate set must be discarded.
 
@@ -353,9 +373,7 @@ Do not inject unsanitised HTML.
 
 ## SR-008 — Basic Rate Limiting
 
-The deployed AI-backed search endpoint should have lightweight abuse protection.
-
-A simple per-IP or platform-provided rate limit is sufficient for the MVP.
+The SQLite search endpoint must enforce a process-local limit of 20 searches per IP per 60 seconds and return HTTP 429 with `Retry-After` when exceeded.
 
 ---
 
@@ -382,21 +400,21 @@ Persistent storage of user search queries is not required for the MVP.
 
 # 6. AI Grounding Requirements
 
-## AR-001 — Retrieval Before Generation
+## AR-001 — Controlled Interpretation Before Retrieval
 
-The server must retrieve candidates before invoking the explanation model.
+Puter may select query-expansion terms only from the supplied vocabulary. The server must validate those terms and retrieve candidates before the browser invokes the explanation call.
 
 ---
 
 ## AR-002 — Candidate-Constrained Generation
 
-The model may only discuss supplied researcher candidates.
+The explanation call may only discuss supplied researcher candidates.
 
 ---
 
 ## AR-003 — Evidence-Constrained Explanation
 
-The model must base explanations only on stored researcher profile fields.
+Puter must base explanations only on stored researcher profile fields.
 
 If evidence is weak, the explanation should indicate uncertainty.
 
@@ -430,11 +448,11 @@ Preferred language:
 
 # 7. UX Requirements
 
-## UX-001 — Search Is the Interface
+## UX-001 — Search Is the Primary Interface
 
 The search bar must be the dominant interface element.
 
-There must be no dashboard, sidebar, feed, profile browser, or other competing workflow.
+The people directory and profiles must remain visually secondary to the focused search workflow. Do not introduce dashboards, sidebars, or feeds.
 
 ---
 
@@ -494,9 +512,7 @@ in different words.
 
 Do not implement:
 
-- people directory;
-- profile pages;
-- raw profile browsing;
+- related-people recommendations;
 - researcher map;
 - relationship graph;
 - filters;
@@ -526,15 +542,17 @@ The repository should test:
 1. exact researcher name retrieval;
 2. topic retrieval;
 3. method/instrument retrieval;
-4. semantic similarity utility;
-5. hybrid ranking;
+4. expertise-vocabulary generation and validation;
+5. raw-plus-expanded ranking and exact-name precedence;
 6. seed operation;
 7. empty query rejection;
 8. oversized query rejection;
-9. AI explanation failure fallback;
-10. invalid model researcher ID rejection;
-11. structured model output validation;
-12. search results contain only database researchers.
+9. Puter interpretation and explanation failure fallbacks;
+10. unknown and duplicate model term/ID rejection;
+11. strict and fenced JSON model output validation;
+12. search results contain only database researchers;
+13. evidence payloads and the 20-per-minute IP rate limit;
+14. browser interpretation, topic, notice, and explanation rendering.
 
 ---
 
@@ -552,9 +570,12 @@ and demonstrate:
 
 1. exact-name search;
 2. topic/method/instrument search;
-3. natural-language semantic search;
+3. natural-language controlled query expansion;
 4. ranked researcher results;
 5. short grounded AI explanations;
-6. graceful fallback when AI explanation generation fails.
+6. graceful raw-lexical and deterministic-reason fallback when Puter fails;
+7. an alphabetical directory containing every researcher;
+8. stable profile links from both the directory and search results;
+9. a complete stored-data profile for every researcher.
 
 The MVP is not complete if additional product features have displaced effort from this core flow.

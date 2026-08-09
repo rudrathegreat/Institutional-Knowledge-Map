@@ -8,24 +8,43 @@ import type {
   SearchResponsePayload,
   SearchResultPayload,
 } from "@/lib/api-types";
+import { explainCandidates, interpretQuery } from "@/lib/puter-ai";
 
 const MAX_QUERY_LENGTH = 2_000;
+const INTERPRETATION_UNAVAILABLE_NOTICE =
+  "AI interpretation was unavailable, so these results use directory keywords.";
+const EXPLANATION_UNAVAILABLE_NOTICE =
+  "AI explanations were unavailable, so the match reasons use directory evidence.";
 
 type SearchState = "idle" | "loading" | "results" | "empty" | "error";
 
-export function SearchExperience() {
+interface SearchExperienceProps {
+  expertiseVocabulary?: string[];
+}
+
+export function SearchExperience({
+  expertiseVocabulary = [],
+}: SearchExperienceProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultPayload[]>([]);
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [message, setMessage] = useState("");
+  const [interpretation, setInterpretation] = useState("");
+  const [interpretedTopics, setInterpretedTopics] = useState<string[]>([]);
+  const [aiNotice, setAiNotice] = useState("");
   const activeRequest = useRef<AbortController | null>(null);
 
   const hasSearched = searchState !== "idle";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    activeRequest.current?.abort();
 
     const trimmedQuery = query.trim();
+
+    setInterpretation("");
+    setInterpretedTopics([]);
+    setAiNotice("");
 
     if (!trimmedQuery) {
       setResults([]);
@@ -41,7 +60,6 @@ export function SearchExperience() {
       return;
     }
 
-    activeRequest.current?.abort();
     const controller = new AbortController();
     activeRequest.current = controller;
 
@@ -49,12 +67,37 @@ export function SearchExperience() {
     setSearchState("loading");
 
     try {
+      let interpretedTerms: string[] = [];
+      let aiInterpretationAvailable = false;
+
+      try {
+        const interpretedQuery = await interpretQuery(
+          trimmedQuery,
+          expertiseVocabulary,
+        );
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        interpretedTerms = interpretedQuery.searchTerms;
+        aiInterpretationAvailable = true;
+        setInterpretation(interpretedQuery.interpretation);
+        setInterpretedTopics(interpretedQuery.interpretedTopics);
+      } catch {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setAiNotice(INTERPRETATION_UNAVAILABLE_NOTICE);
+      }
+
       const response = await fetch("/api/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query: trimmedQuery }),
+        body: JSON.stringify({ query: trimmedQuery, interpretedTerms }),
         signal: controller.signal,
       });
 
@@ -70,8 +113,25 @@ export function SearchExperience() {
         throw new Error(errorMessage);
       }
 
-      setResults(payload.results);
-      setSearchState(payload.results.length > 0 ? "results" : "empty");
+      let displayedResults = payload.results;
+
+      if (aiInterpretationAvailable && displayedResults.length > 0) {
+        try {
+          displayedResults = await explainCandidates(
+            trimmedQuery,
+            displayedResults,
+          );
+        } catch {
+          setAiNotice(EXPLANATION_UNAVAILABLE_NOTICE);
+        }
+      }
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setResults(displayedResults);
+      setSearchState(displayedResults.length > 0 ? "results" : "empty");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
@@ -95,7 +155,6 @@ export function SearchExperience() {
     <main className="pageShell" data-has-searched={hasSearched}>
       <div className="pageContent">
         <header className="hero">
-          <p className="productName">Expertise Navigator</p>
           <h1>Who should I talk to?</h1>
         </header>
 
@@ -138,12 +197,32 @@ export function SearchExperience() {
           {searchState === "loading" && (
             <>
               <span className="spinner" aria-hidden="true" />
-              Searching expertise…
+              Interpreting your need and searching…
             </>
           )}
 
           {searchState === "error" && message}
         </div>
+
+        {interpretation && searchState !== "error" && (
+          <section className="searchInterpretation" aria-label="AI interpretation">
+            <h2>How your search was interpreted</h2>
+            <p>{interpretation}</p>
+            {interpretedTopics.length > 0 && (
+              <ul className="interpretedTopics" aria-label="Interpreted topics">
+                {interpretedTopics.map((topic) => (
+                  <li key={topic}>{topic}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {aiNotice && searchState !== "error" && (
+          <p className="aiNotice" role="status">
+            {aiNotice}
+          </p>
+        )}
 
         {searchState === "empty" && (
           <section className="emptyState" aria-live="polite">

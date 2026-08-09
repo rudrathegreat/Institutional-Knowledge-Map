@@ -8,6 +8,13 @@
       "when": 1786254247265,
       "tag": "0000_damp_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786262400000,
+      "tag": "0001_add_researcher_slugs",
+      "breakpoints": true
     }
   ]
 }

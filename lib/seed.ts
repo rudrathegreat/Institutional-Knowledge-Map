@@ -37,6 +37,16 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
     );
   }
 
+  const slugs = mockResearchers.map((researcher) => researcher.slug);
+
+  if (
+    slugs.some((slug) => !slug.trim()) ||
+    new Set(slugs).size !== mockResearchers.length
+  ) {
+    sqlite.close();
+    throw new Error("Researcher slugs must be non-empty and unique.");
+  }
+
   const rows = mockResearchers.map((researcher) => ({
     ...researcher,
     searchDocument: buildSearchDocument(researcher),

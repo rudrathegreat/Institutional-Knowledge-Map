@@ -17,7 +17,7 @@ The desired qualities are:
 - academic;
 - human-centred.
 
-There is only one important interaction:
+The primary interaction is:
 
 > **Search for expertise.**
 
@@ -27,7 +27,7 @@ The interface should visually reinforce that simplicity.
 
 ## 2. Core Principle
 
-> **The search bar is the product.**
+> **The search bar is the primary product interaction.**
 
 Anything that competes visually with the search input or results should be removed.
 
@@ -41,7 +41,7 @@ Do not design a social network.
 
 ## 3. MVP Screen Structure
 
-The MVP consists of one screen/state flow:
+The primary search experience uses this state flow:
 
 ```text
 Initial search state
@@ -53,9 +53,7 @@ Results state
 New search
 ```
 
-No persistent sidebar is required.
-
-No secondary product navigation is required.
+Use a restrained persistent header with Search and People navigation. Do not add a sidebar.
 
 ---
 
@@ -405,8 +403,8 @@ No illustration is required.
 Example:
 
 ```text
-Semantic search is temporarily unavailable.
-Showing keyword matches instead.
+AI interpretation was unavailable.
+Showing directory-keyword matches instead.
 ```
 
 Keep errors calm and actionable.
@@ -455,7 +453,7 @@ On mobile:
 - keep the search input full width;
 - stack result content naturally.
 
-No special mobile navigation is required because the MVP has one core screen.
+Keep the same compact Search and People links on mobile; no separate menu is required.
 
 ---
 
@@ -514,7 +512,7 @@ Do not build:
 
 - dashboard cards;
 - sidebars;
-- profile screens;
+- related-people panels;
 - network maps;
 - graph visualisations;
 - feeds;
@@ -526,7 +524,7 @@ Do not build:
 - neon effects;
 - animated backgrounds;
 - large illustrations;
-- complex navigation;
+- navigation beyond Search and People;
 - marketing sections.
 
 ---
