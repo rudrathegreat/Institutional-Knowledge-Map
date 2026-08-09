@@ -69,6 +69,7 @@ describe("SearchExperience", () => {
                 instruments: ["MeerKAT"],
                 software: ["PSRCHIVE"],
                 keywords: ["scintillation"],
+                publications: [],
               },
             },
           ],
@@ -116,6 +117,42 @@ describe("SearchExperience", () => {
               instruments: ["ASKAP"],
               software: ["PRESTO"],
               keywords: ["FRB"],
+              publications: [
+                {
+                  id: "orcid_work_006_01",
+                  title:
+                    "Wide-field localisation strategies for repeating fast radio bursts",
+                  workType: "journal-article",
+                  publicationDate: "2026-01-29",
+                  dataSource: "mock",
+                },
+              ],
+            },
+          },
+          {
+            id: "researcher_003",
+            slug: "priya-nair",
+            name: "Priya Nair",
+            title: "Lecturer",
+            role: "Compact Object Researcher",
+            researchAreas: ["compact objects"],
+            reason: "Deterministic Priya reason.",
+            evidence: {
+              biography: "Priya models compact-object populations.",
+              methods: ["Bayesian inference"],
+              instruments: ["ASKAP"],
+              software: ["Bilby"],
+              keywords: ["uncertainty"],
+              publications: [
+                {
+                  id: "orcid_work_003_01",
+                  title:
+                    "Bayesian population constraints from incomplete radio-transient samples",
+                  workType: "journal-article",
+                  publicationDate: "2026-04-21",
+                  dataSource: "mock",
+                },
+              ],
             },
           },
         ],
@@ -129,7 +166,16 @@ describe("SearchExperience", () => {
     });
     puterAiMocks.explainCandidates.mockImplementation(
       async (_query, candidates) => [
-        { ...candidates[0], reason: "Her stored profile covers burst searches." },
+        {
+          ...candidates[1],
+          reason:
+            "Priya's listed demo publication supports recent relevance to this question.",
+          isSuggestedContact: true,
+        },
+        {
+          ...candidates[0],
+          reason: "Aisha's stored profile covers burst searches.",
+        },
       ],
     );
 
@@ -153,8 +199,15 @@ describe("SearchExperience", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Radio transients")).toBeInTheDocument();
     expect(screen.getByText("Signal detection")).toBeInTheDocument();
+    const resultCards = screen.getAllByRole("article");
+    expect(resultCards[0]).toHaveTextContent("Priya Nair");
+    expect(resultCards[0]).toHaveTextContent("Suggested first contact");
+    expect(resultCards[0]).toHaveTextContent(
+      "Priya's listed demo publication supports recent relevance to this question.",
+    );
+    expect(resultCards[1]).toHaveTextContent("Aisha Rahman");
     expect(
-      screen.getByText("Her stored profile covers burst searches."),
+      screen.getByText("Aisha's stored profile covers burst searches."),
     ).toBeInTheDocument();
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
       query: "a brief signal from far away",
@@ -191,6 +244,24 @@ describe("SearchExperience", () => {
                 instruments: ["MeerKAT"],
                 software: ["TEMPO2"],
                 keywords: ["timing noise"],
+                publications: [],
+              },
+            },
+            {
+              id: "researcher_002",
+              slug: "daniel-brooks",
+              name: "Daniel Brooks",
+              title: "Research Fellow",
+              role: "Radio Astronomer",
+              researchAreas: ["radio astronomy"],
+              reason: "Their stored profile includes scintillation analysis.",
+              evidence: {
+                biography: "Daniel studies radio propagation.",
+                methods: ["scintillation analysis"],
+                instruments: ["MeerKAT"],
+                software: ["PSRCHIVE"],
+                keywords: ["scintillation"],
+                publications: [],
               },
             },
           ],
@@ -207,7 +278,17 @@ describe("SearchExperience", () => {
     expect(
       await screen.findByText("Their stored profile includes pulsars."),
     ).toBeInTheDocument();
+    const resultCards = screen.getAllByRole("article");
+    expect(resultCards[0]).toHaveTextContent("Maya Chen");
+    expect(resultCards[0]).toHaveTextContent(
+      "Their stored profile includes pulsars.",
+    );
+    expect(resultCards[1]).toHaveTextContent("Daniel Brooks");
+    expect(resultCards[1]).toHaveTextContent(
+      "Their stored profile includes scintillation analysis.",
+    );
     expect(screen.getByText(/AI explanations were unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText("Suggested first contact")).not.toBeInTheDocument();
   });
 
   it("renders the documented empty-results guidance", async () => {

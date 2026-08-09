@@ -216,7 +216,9 @@ Each researcher should contain fields such as:
 - software;
 - keywords;
 - searchable profile text;
-- a nullable, unused embedding compatibility field.
+- a nullable, unused embedding compatibility field;
+- a clearly labelled mock ORCID iD;
+- three repository-controlled fictional recent publications.
 
 ---
 
@@ -240,7 +242,7 @@ The following must not be implemented in the MVP.
 - institutional profile ingestion;
 - web crawling;
 - scheduled refreshes;
-- publication ingestion;
+- live publication ingestion (the repository contains local mock publication fixtures only);
 - bibliometric APIs;
 - automated data synchronisation.
 

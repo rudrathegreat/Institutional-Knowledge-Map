@@ -90,6 +90,28 @@ describe("POST /api/search", () => {
       instruments: expect.arrayContaining(["MeerKAT"]),
       software: expect.arrayContaining(["TEMPO2"]),
       keywords: expect.arrayContaining(["timing noise"]),
+      publications: expect.arrayContaining([
+        expect.objectContaining({
+          title:
+            "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
+          dataSource: "mock",
+        }),
+      ]),
+    });
+  });
+
+  it("retrieves a researcher using publication-title evidence", async () => {
+    const response = await POST(
+      requestWithBody(
+        JSON.stringify({ query: "chromatic scintillation arcs" }),
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.results[0]).toMatchObject({
+      id: "researcher_002",
+      reason: expect.stringContaining("recent listed demo publication"),
     });
   });
 

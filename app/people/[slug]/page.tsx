@@ -16,6 +16,22 @@ interface ProfileFieldProps {
   items: string[];
 }
 
+function formatPublicationDate(publicationDate: string): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${publicationDate}T00:00:00Z`));
+}
+
+function formatWorkType(workType: string): string {
+  return workType
+    .split("-")
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function ProfileField({ title, items }: ProfileFieldProps) {
   return (
     <section className="profileField">
@@ -63,17 +79,48 @@ export default async function PersonPage({ params }: PersonPageProps) {
         <header className="profileHeader">
           <p className="eyebrow">Person profile</p>
           <h1>{person.name}</h1>
-          <p>
+          <p className="profileRole">
             {person.title}
             <span aria-hidden="true"> · </span>
             {person.role}
           </p>
+          {person.orcidId && person.orcidIdStatus === "mock" && (
+            <p className="mockOrcidId">
+              <span>Mock ORCID iD</span>
+              <span>{person.orcidId}</span>
+            </p>
+          )}
         </header>
 
         <section className="profileBiography">
           <h2>About</h2>
           <p>{person.biography}</p>
         </section>
+
+        {person.publications.length > 0 && (
+          <section className="profilePublications">
+            <header>
+              <h2>Recent publications</h2>
+              <p>
+                The ORCID iD and publications are fictional prototype data.
+              </p>
+            </header>
+            <ol className="publicationList">
+              {person.publications.map((publication) => (
+                <li key={publication.id}>
+                  <h3>{publication.title}</h3>
+                  <p>
+                    {formatWorkType(publication.workType)}
+                    <span aria-hidden="true"> · </span>
+                    <time dateTime={publication.publicationDate}>
+                      {formatPublicationDate(publication.publicationDate)}
+                    </time>
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         <div className="profileFields">
           <ProfileField title="Research areas" items={person.researchAreas} />

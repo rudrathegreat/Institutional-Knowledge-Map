@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -68,6 +68,31 @@ describe("people directory and profiles", () => {
     expect(screen.getByText("Murriyang")).toBeInTheDocument();
     expect(screen.getByText("TEMPO2")).toBeInTheDocument();
     expect(screen.getByText("compact objects")).toBeInTheDocument();
+    expect(screen.getByText("Mock ORCID iD")).toBeInTheDocument();
+    expect(screen.getByText("0000-0000-DEMO-0001").closest("a")).toBeNull();
+    expect(
+      screen.getByText(
+        "The ORCID iD and publications are fictional prototype data.",
+      ),
+    ).toBeInTheDocument();
+
+    const publicationSection = screen
+      .getByRole("heading", { name: "Recent publications" })
+      .closest("section");
+    expect(publicationSection).not.toBeNull();
+
+    const publicationItems = within(publicationSection!).getAllByRole("listitem");
+    expect(publicationItems).toHaveLength(3);
+    expect(publicationItems[0]).toHaveTextContent(
+      "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
+    );
+    expect(publicationItems[1]).toHaveTextContent(
+      "Ephemeris modelling for subtle neutron-star timing residuals",
+    );
+    expect(publicationItems[2]).toHaveTextContent(
+      "Combining Murriyang and MeerKAT pulse arrival times with TEMPO2",
+    );
+    expect(within(publicationSection!).queryAllByRole("link")).toHaveLength(0);
 
     await expect(
       generateMetadata({

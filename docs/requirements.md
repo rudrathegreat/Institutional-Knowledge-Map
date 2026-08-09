@@ -83,10 +83,13 @@ The application must combine raw-query lexical evidence with validated expanded-
 
 Exact researcher-name matches must always precede expansion matches. Expanded-term scores contribute at `0.35 ×` their accumulated lexical score.
 
+After retrieval, a successful candidate-constrained Puter call may reorder the complete server result set for the specific query. Curated profile fields remain primary evidence; recent publication titles and dates may corroborate current relevance or distinguish close candidates. An exact researcher-name match must remain first regardless of the proposed model order.
+
 ### Acceptance tests
 
 - Exact full-name searches return the intended person first.
 - A conceptually relevant profile can appear even when exact wording differs.
+- Unknown and duplicate model-ranked IDs are discarded, and omitted candidates retain their deterministic relative order.
 - Numerical ranking values are not shown to users as expertise scores.
 
 ---
@@ -101,11 +104,13 @@ Each result must include at minimum:
 - title or role;
 - relevant research areas or expertise;
 - concise relevance explanation when available.
+- a `Suggested first contact` badge on the first result after a valid AI re-ranking response.
 
 ### Acceptance tests
 
 - Every displayed result corresponds to a valid database record.
 - No AI-generated researcher identity can be rendered.
+- AI ordering may change card order while reasons remain attached to the correct researcher.
 - Results remain usable when explanation generation is unavailable.
 
 ---
@@ -116,15 +121,17 @@ The browser may send retrieved candidate researchers to Puter.
 
 Puter must return structured JSON containing:
 
-- researcher ID;
-- concise relevance reason;
+- an ordered `recommendations` array containing each supplied candidate once;
+- researcher ID and concise relevance reason for every recommendation;
 - interpreted query topics are produced by the separate pre-retrieval interpretation call and remain in browser state.
 
 ### Acceptance tests
 
 - Puter can only reference candidate researcher IDs supplied by the server.
-- Returned IDs are validated before display.
+- Returned IDs and ordering are validated before display; unknown and duplicate IDs are discarded.
+- Candidates omitted by the model are appended in their original server order with deterministic reasons.
 - Explanations must be based on stored researcher evidence.
+- Up to three stored mock publication titles and dates may be supplied as candidate-bound supporting evidence.
 - Invalid model output is handled without crashing the search flow.
 
 ---
@@ -155,13 +162,16 @@ The data should contain:
 - overlapping research topics;
 - overlapping methods;
 - different instruments/software;
-- multiple plausible matches for some queries.
+- multiple plausible matches for some queries;
+- one clearly fictional mock ORCID iD and three fictional recent papers per researcher.
 
 ### Acceptance tests
 
 - The development database can be seeded from repository-controlled data.
 - At least five prepared test queries return more than one plausible researcher.
 - Re-seeding produces a predictable development dataset.
+- All mock ORCID iDs and publication IDs are unique and cover every researcher exactly once.
+- Seeding creates exactly 90 mock publication records without network access.
 
 ---
 
@@ -212,7 +222,7 @@ The application must provide an alphabetical directory containing every stored r
 
 ## FR-012 — Person Profiles
 
-Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, biography, research areas, methods, instruments, software, and keywords. Search-result names must link to the same profiles.
+Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, biography, research areas, methods, instruments, software, keywords, mock ORCID iD, and newest-first recent publications. Search-result names must link to the same profiles.
 
 ### Acceptance tests
 
@@ -220,6 +230,7 @@ Every researcher must have a stable, human-readable profile URL. Profiles must s
 - Unknown slugs return a controlled 404 page.
 - Profile metadata identifies the person.
 - Slugs remain unique and deterministic across reseeding.
+- Mock ORCID iDs and papers are visibly disclosed as fictional prototype data and do not produce external links.
 
 ---
 
@@ -433,7 +444,7 @@ The explanation call may only discuss supplied researcher candidates.
 
 ## AR-003 — Evidence-Constrained Explanation
 
-Puter must base explanations only on stored researcher profile fields.
+Puter must base explanations only on stored researcher profile fields and candidate-bound mock publication titles. A publication title must not be treated as proof of credentials, contribution level, or expertise beyond the title.
 
 If evidence is weak, the explanation should indicate uncertainty.
 
@@ -447,9 +458,11 @@ The application must not create long conversational responses.
 
 ---
 
-## AR-005 — Avoid Ranking Language
+## AR-005 — Query-Specific Contact Language
 
-Do not use labels such as:
+The first result after a validated AI re-ranking may be labelled `Suggested first contact`. This means only that the person is the first contact suggested for the submitted query and supplied evidence; it is not an objective judgment of researcher quality, seniority, or impact.
+
+Do not use absolute labels such as:
 
 - best scientist;
 - most qualified;
@@ -459,6 +472,7 @@ Do not use labels such as:
 Preferred language:
 
 - relevant to this query;
+- suggested first contact;
 - may be useful to approach;
 - relevant experience;
 - also relevant.

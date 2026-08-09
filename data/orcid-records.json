@@ -1,0 +1,302 @@
+[
+  {
+    "researcherId": "researcher_001",
+    "orcidId": "0000-0000-DEMO-0001",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_001_01", "title": "Long-baseline pulsar timing constraints on rotational noise with MeerKAT", "workType": "journal-article", "publicationDate": "2026-06-18" },
+      { "id": "orcid_work_001_02", "title": "Ephemeris modelling for subtle neutron-star timing residuals", "workType": "journal-article", "publicationDate": "2025-09-04" },
+      { "id": "orcid_work_001_03", "title": "Combining Murriyang and MeerKAT pulse arrival times with TEMPO2", "workType": "conference-paper", "publicationDate": "2024-03-12" }
+    ]
+  },
+  {
+    "researcherId": "researcher_002",
+    "orcidId": "0000-0000-DEMO-0002",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_002_01", "title": "Chromatic scintillation arcs in repeated pulsar dynamic spectra", "workType": "journal-article", "publicationDate": "2026-05-27" },
+      { "id": "orcid_work_002_02", "title": "Separating propagation signatures from intrinsic pulse variability", "workType": "journal-article", "publicationDate": "2025-08-15" },
+      { "id": "orcid_work_002_03", "title": "Signal-processing tests for dispersion changes in MeerKAT observations", "workType": "conference-paper", "publicationDate": "2024-02-08" }
+    ]
+  },
+  {
+    "researcherId": "researcher_003",
+    "orcidId": "0000-0000-DEMO-0003",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_003_01", "title": "Bayesian population constraints from incomplete radio-transient samples", "workType": "journal-article", "publicationDate": "2026-04-21" },
+      { "id": "orcid_work_003_02", "title": "Selection-aware classification of compact-object transients", "workType": "journal-article", "publicationDate": "2025-07-10" },
+      { "id": "orcid_work_003_03", "title": "Comparing neutron-star formation channels with hierarchical inference", "workType": "conference-paper", "publicationDate": "2024-01-19" }
+    ]
+  },
+  {
+    "researcherId": "researcher_004",
+    "orcidId": "0000-0000-DEMO-0004",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_004_01", "title": "Receiver-response diagnostics for sensitive radio interferometers", "workType": "journal-article", "publicationDate": "2026-03-30" },
+      { "id": "orcid_work_004_02", "title": "Tracing amplitude systematics through ASKAP calibration workflows", "workType": "journal-article", "publicationDate": "2025-06-12" },
+      { "id": "orcid_work_004_03", "title": "Controlled noise characterisation for multi-array radio observations", "workType": "conference-paper", "publicationDate": "2024-05-03" }
+    ]
+  },
+  {
+    "researcherId": "researcher_005",
+    "orcidId": "0000-0000-DEMO-0005",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_005_01", "title": "Survey selection effects in Galactic pulsar population synthesis", "workType": "journal-article", "publicationDate": "2026-02-26" },
+      { "id": "orcid_work_005_02", "title": "Monte Carlo forecasts for joint radio and gamma-ray neutron-star samples", "workType": "journal-article", "publicationDate": "2025-05-08" },
+      { "id": "orcid_work_005_03", "title": "Testing pulsar demographic models with simulated Murriyang surveys", "workType": "conference-paper", "publicationDate": "2024-04-17" }
+    ]
+  },
+  {
+    "researcherId": "researcher_006",
+    "orcidId": "0000-0000-DEMO-0006",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_006_01", "title": "Wide-field localisation strategies for repeating fast radio bursts", "workType": "journal-article", "publicationDate": "2026-01-29" },
+      { "id": "orcid_work_006_02", "title": "Validating impulsive radio candidates across ASKAP and CHIME", "workType": "journal-article", "publicationDate": "2025-04-24" },
+      { "id": "orcid_work_006_03", "title": "Dedispersion benchmarks for real-time extragalactic burst searches", "workType": "conference-paper", "publicationDate": "2024-06-06" }
+    ]
+  },
+  {
+    "researcherId": "researcher_007",
+    "orcidId": "0000-0000-DEMO-0007",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_007_01", "title": "Artifact-resistant image differencing for optical transient alerts", "workType": "journal-article", "publicationDate": "2026-07-09" },
+      { "id": "orcid_work_007_02", "title": "Prioritising variable-source follow-up in Rubin alert streams", "workType": "journal-article", "publicationDate": "2025-11-13" },
+      { "id": "orcid_work_007_03", "title": "Scalable light-curve filtering for wide-field time-domain surveys", "workType": "conference-paper", "publicationDate": "2024-08-22" }
+    ]
+  },
+  {
+    "researcherId": "researcher_008",
+    "orcidId": "0000-0000-DEMO-0008",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_008_01", "title": "Spectral-line indicators for early supernova classification", "workType": "journal-article", "publicationDate": "2026-06-02" },
+      { "id": "orcid_work_008_02", "title": "Connecting optical spectra to explosion histories with light-curve fitting", "workType": "journal-article", "publicationDate": "2025-10-16" },
+      { "id": "orcid_work_008_03", "title": "Cadence requirements for rapid stellar-explosion follow-up", "workType": "conference-paper", "publicationDate": "2024-07-18" }
+    ]
+  },
+  {
+    "researcherId": "researcher_009",
+    "orcidId": "0000-0000-DEMO-0009",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_009_01", "title": "Multi-wavelength energy distributions of fading gamma-ray burst afterglows", "workType": "journal-article", "publicationDate": "2026-05-14" },
+      { "id": "orcid_work_009_02", "title": "Joint X-ray and radio constraints on relativistic transient jets", "workType": "journal-article", "publicationDate": "2025-09-25" },
+      { "id": "orcid_work_009_03", "title": "Selecting follow-up observations for energetic afterglow models", "workType": "conference-paper", "publicationDate": "2024-06-27" }
+    ]
+  },
+  {
+    "researcherId": "researcher_010",
+    "orcidId": "0000-0000-DEMO-0010",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_010_01", "title": "Coordinated counterpart searches for high-energy neutrino alerts", "workType": "journal-article", "publicationDate": "2026-04-09" },
+      { "id": "orcid_work_010_02", "title": "Cross-matching transient candidates across multi-messenger facilities", "workType": "journal-article", "publicationDate": "2025-08-28" },
+      { "id": "orcid_work_010_03", "title": "Rapid alert triage for time-critical astrophysical follow-up", "workType": "conference-paper", "publicationDate": "2024-05-23" }
+    ]
+  },
+  {
+    "researcherId": "researcher_011",
+    "orcidId": "0000-0000-DEMO-0011",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_011_01", "title": "Reconstructing galaxy assembly with resolved stellar populations", "workType": "journal-article", "publicationDate": "2026-03-12" },
+      { "id": "orcid_work_011_02", "title": "Spectroscopic age constraints in nearby evolving galaxies", "workType": "journal-article", "publicationDate": "2025-07-31" },
+      { "id": "orcid_work_011_03", "title": "Combining population synthesis and SED fitting for extragalactic histories", "workType": "conference-paper", "publicationDate": "2024-04-11" }
+    ]
+  },
+  {
+    "researcherId": "researcher_012",
+    "orcidId": "0000-0000-DEMO-0012",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_012_01", "title": "Lensing-assisted morphology measurements for early-universe galaxies", "workType": "journal-article", "publicationDate": "2026-02-19" },
+      { "id": "orcid_work_012_02", "title": "Infrared decomposition of compact high-redshift galaxy structure", "workType": "journal-article", "publicationDate": "2025-06-26" },
+      { "id": "orcid_work_012_03", "title": "Uncertainty propagation in gravitational lens reconstructions", "workType": "conference-paper", "publicationDate": "2024-03-28" }
+    ]
+  },
+  {
+    "researcherId": "researcher_013",
+    "orcidId": "0000-0000-DEMO-0013",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_013_01", "title": "Emission-line diagnostics of changing active galactic nuclei", "workType": "journal-article", "publicationDate": "2026-01-22" },
+      { "id": "orcid_work_013_02", "title": "X-ray spectral constraints on obscured supermassive black-hole growth", "workType": "journal-article", "publicationDate": "2025-05-29" },
+      { "id": "orcid_work_013_03", "title": "Linking accretion signatures to host-galaxy evolution", "workType": "conference-paper", "publicationDate": "2024-02-15" }
+    ]
+  },
+  {
+    "researcherId": "researcher_014",
+    "orcidId": "0000-0000-DEMO-0014",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_014_01", "title": "Neutral-hydrogen morphology across nearby galaxy environments", "workType": "journal-article", "publicationDate": "2026-07-16" },
+      { "id": "orcid_work_014_02", "title": "Reliable source finding in deep spectral-line radio cubes", "workType": "journal-article", "publicationDate": "2025-12-04" },
+      { "id": "orcid_work_014_03", "title": "Interferometric imaging strategies for diffuse galactic gas", "workType": "conference-paper", "publicationDate": "2024-09-05" }
+    ]
+  },
+  {
+    "researcherId": "researcher_015",
+    "orcidId": "0000-0000-DEMO-0015",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_015_01", "title": "Hydrodynamic predictions for galaxy growth in cosmic filaments", "workType": "journal-article", "publicationDate": "2026-06-25" },
+      { "id": "orcid_work_015_02", "title": "Statistical calibration of large-scale structure simulations", "workType": "journal-article", "publicationDate": "2025-11-20" },
+      { "id": "orcid_work_015_03", "title": "Comparing N-body and baryonic models of cosmic web formation", "workType": "conference-paper", "publicationDate": "2024-08-08" }
+    ]
+  },
+  {
+    "researcherId": "researcher_016",
+    "orcidId": "0000-0000-DEMO-0016",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_016_01", "title": "Population-level inference for compact binary merger masses", "workType": "journal-article", "publicationDate": "2026-05-07" },
+      { "id": "orcid_work_016_02", "title": "Bayesian parameter estimation under gravitational-wave calibration uncertainty", "workType": "journal-article", "publicationDate": "2025-10-02" },
+      { "id": "orcid_work_016_03", "title": "Signal inference for marginal binary-merger candidates", "workType": "conference-paper", "publicationDate": "2024-07-11" }
+    ]
+  },
+  {
+    "researcherId": "researcher_017",
+    "orcidId": "0000-0000-DEMO-0017",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_017_01", "title": "Validating compact-binary waveforms across strong-field regimes", "workType": "journal-article", "publicationDate": "2026-04-16" },
+      { "id": "orcid_work_017_02", "title": "Perturbative corrections for precision gravitational-wave models", "workType": "journal-article", "publicationDate": "2025-09-11" },
+      { "id": "orcid_work_017_03", "title": "Systematic waveform errors in relativistic parameter recovery", "workType": "conference-paper", "publicationDate": "2024-06-13" }
+    ]
+  },
+  {
+    "researcherId": "researcher_018",
+    "orcidId": "0000-0000-DEMO-0018",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_018_01", "title": "High-resolution simulations of neutron-star merger remnants", "workType": "journal-article", "publicationDate": "2026-03-05" },
+      { "id": "orcid_work_018_02", "title": "Finite-difference stability in dynamical black-hole spacetimes", "workType": "journal-article", "publicationDate": "2025-08-07" },
+      { "id": "orcid_work_018_03", "title": "Scaling numerical-relativity workflows on heterogeneous supercomputers", "workType": "conference-paper", "publicationDate": "2024-05-16" }
+    ]
+  },
+  {
+    "researcherId": "researcher_019",
+    "orcidId": "0000-0000-DEMO-0019",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_019_01", "title": "Time-frequency fingerprints of transient detector noise", "workType": "journal-article", "publicationDate": "2026-02-12" },
+      { "id": "orcid_work_019_02", "title": "Data-quality monitoring for long gravitational-wave observing runs", "workType": "journal-article", "publicationDate": "2025-07-03" },
+      { "id": "orcid_work_019_03", "title": "Distinguishing instrumental glitches from compact-binary signals", "workType": "conference-paper", "publicationDate": "2024-04-25" }
+    ]
+  },
+  {
+    "researcherId": "researcher_020",
+    "orcidId": "0000-0000-DEMO-0020",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_020_01", "title": "Joint gravitational-wave and kilonova constraints on neutron-star mergers", "workType": "journal-article", "publicationDate": "2026-01-15" },
+      { "id": "orcid_work_020_02", "title": "Light-curve systematics in multi-messenger parameter estimation", "workType": "journal-article", "publicationDate": "2025-05-15" },
+      { "id": "orcid_work_020_03", "title": "Bayesian consistency tests for merger counterpart models", "workType": "conference-paper", "publicationDate": "2024-03-14" }
+    ]
+  },
+  {
+    "researcherId": "researcher_021",
+    "orcidId": "0000-0000-DEMO-0021",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_021_01", "title": "Molecular signatures in temperate exoplanet transmission spectra", "workType": "journal-article", "publicationDate": "2026-07-02" },
+      { "id": "orcid_work_021_02", "title": "Cloud-aware atmospheric retrieval for near-infrared transit observations", "workType": "journal-article", "publicationDate": "2025-11-06" },
+      { "id": "orcid_work_021_03", "title": "Radiative-transfer tests for chemically diverse planetary atmospheres", "workType": "conference-paper", "publicationDate": "2024-08-29" }
+    ]
+  },
+  {
+    "researcherId": "researcher_022",
+    "orcidId": "0000-0000-DEMO-0022",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_022_01", "title": "Chemical abundance patterns in dynamically heated Galactic stars", "workType": "journal-article", "publicationDate": "2026-06-11" },
+      { "id": "orcid_work_022_02", "title": "High-resolution spectral synthesis for metal-poor stellar populations", "workType": "journal-article", "publicationDate": "2025-10-23" },
+      { "id": "orcid_work_022_03", "title": "Tracing Milky Way assembly with elemental abundance ratios", "workType": "conference-paper", "publicationDate": "2024-07-25" }
+    ]
+  },
+  {
+    "researcherId": "researcher_023",
+    "orcidId": "0000-0000-DEMO-0023",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_023_01", "title": "Oscillation-frequency diagnostics of evolving solar-like stars", "workType": "journal-article", "publicationDate": "2026-05-21" },
+      { "id": "orcid_work_023_02", "title": "Robust time-series extraction of low-amplitude stellar modes", "workType": "journal-article", "publicationDate": "2025-09-18" },
+      { "id": "orcid_work_023_03", "title": "Combining asteroseismic frequencies with stellar evolution models", "workType": "conference-paper", "publicationDate": "2024-06-20" }
+    ]
+  },
+  {
+    "researcherId": "researcher_024",
+    "orcidId": "0000-0000-DEMO-0024",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_024_01", "title": "Filamentary molecular gas around embedded star-forming regions", "workType": "journal-article", "publicationDate": "2026-04-02" },
+      { "id": "orcid_work_024_02", "title": "Cloud segmentation benchmarks for interferometric line maps", "workType": "journal-article", "publicationDate": "2025-08-21" },
+      { "id": "orcid_work_024_03", "title": "Dense-gas tracers across turbulent molecular clouds", "workType": "conference-paper", "publicationDate": "2024-05-09" }
+    ]
+  },
+  {
+    "researcherId": "researcher_025",
+    "orcidId": "0000-0000-DEMO-0025",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_025_01", "title": "Long-term dynamical stability of compact exoplanet systems", "workType": "journal-article", "publicationDate": "2026-03-19" },
+      { "id": "orcid_work_025_02", "title": "Transit-timing signatures of unseen planetary companions", "workType": "journal-article", "publicationDate": "2025-07-17" },
+      { "id": "orcid_work_025_03", "title": "Fast orbit-integration tests for resonant architectures", "workType": "conference-paper", "publicationDate": "2024-04-04" }
+    ]
+  },
+  {
+    "researcherId": "researcher_026",
+    "orcidId": "0000-0000-DEMO-0026",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_026_01", "title": "Hierarchical uncertainty models for heterogeneous astronomy surveys", "workType": "journal-article", "publicationDate": "2026-02-05" },
+      { "id": "orcid_work_026_02", "title": "Calibrated model comparison under survey selection bias", "workType": "journal-article", "publicationDate": "2025-06-19" },
+      { "id": "orcid_work_026_03", "title": "Practical posterior checks for scientific catalogue inference", "workType": "conference-paper", "publicationDate": "2024-03-21" }
+    ]
+  },
+  {
+    "researcherId": "researcher_027",
+    "orcidId": "0000-0000-DEMO-0027",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_027_01", "title": "Reproducible workflow patterns for distributed astronomical pipelines", "workType": "journal-article", "publicationDate": "2026-01-08" },
+      { "id": "orcid_work_027_02", "title": "Automated regression testing for evolving science software", "workType": "journal-article", "publicationDate": "2025-05-01" },
+      { "id": "orcid_work_027_03", "title": "Portable parallel computing across research data environments", "workType": "conference-paper", "publicationDate": "2024-02-22" }
+    ]
+  },
+  {
+    "researcherId": "researcher_028",
+    "orcidId": "0000-0000-DEMO-0028",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_028_01", "title": "Unsupervised anomaly discovery in time-domain survey alerts", "workType": "journal-article", "publicationDate": "2026-07-23" },
+      { "id": "orcid_work_028_02", "title": "Interpretable feature engineering for rare transient classification", "workType": "journal-article", "publicationDate": "2025-12-11" },
+      { "id": "orcid_work_028_03", "title": "Evaluating machine-learning drift in astronomical alert brokers", "workType": "conference-paper", "publicationDate": "2024-09-19" }
+    ]
+  },
+  {
+    "researcherId": "researcher_029",
+    "orcidId": "0000-0000-DEMO-0029",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_029_01", "title": "Metadata quality signals for federated astronomical archives", "workType": "journal-article", "publicationDate": "2026-06-04" },
+      { "id": "orcid_work_029_02", "title": "Scalable catalogue cross-matching through virtual observatory services", "workType": "journal-article", "publicationDate": "2025-10-09" },
+      { "id": "orcid_work_029_03", "title": "Discoverability tests for heterogeneous science data collections", "workType": "conference-paper", "publicationDate": "2024-07-04" }
+    ]
+  },
+  {
+    "researcherId": "researcher_030",
+    "orcidId": "0000-0000-DEMO-0030",
+    "orcidIdStatus": "mock",
+    "works": [
+      { "id": "orcid_work_030_01", "title": "Visual encodings for uncertainty in crowded astronomical catalogues", "workType": "journal-article", "publicationDate": "2026-05-28" },
+      { "id": "orcid_work_030_02", "title": "Interactive cross-match diagnostics for exploratory catalogue analysis", "workType": "journal-article", "publicationDate": "2025-09-04" },
+      { "id": "orcid_work_030_03", "title": "Communicating multivariate survey structure without hiding ambiguity", "workType": "conference-paper", "publicationDate": "2024-06-06" }
+    ]
+  }
+]

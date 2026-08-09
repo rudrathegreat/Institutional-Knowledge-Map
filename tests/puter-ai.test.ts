@@ -33,6 +33,16 @@ const candidates: SearchResultPayload[] = [
       instruments: ["ASKAP"],
       software: ["PRESTO"],
       keywords: ["FRB"],
+      publications: [
+        {
+          id: "orcid_work_006_01",
+          title:
+            "Wide-field localisation strategies for repeating fast radio bursts",
+          workType: "journal-article",
+          publicationDate: "2026-01-29",
+          dataSource: "mock",
+        },
+      ],
     },
   },
   {
@@ -49,6 +59,16 @@ const candidates: SearchResultPayload[] = [
       instruments: ["ASKAP"],
       software: ["Bilby"],
       keywords: ["uncertainty"],
+      publications: [
+        {
+          id: "orcid_work_003_01",
+          title:
+            "Bayesian population constraints from incomplete radio-transient samples",
+          workType: "journal-article",
+          publicationDate: "2026-04-21",
+          dataSource: "mock",
+        },
+      ],
     },
   },
 ];
@@ -153,8 +173,8 @@ describe("Puter query interpretation", () => {
 });
 
 describe("Puter explanation merging", () => {
-  it("discards unknown and duplicate IDs while preserving server order", () => {
-    const merged = mergeExplanationResponse(candidates, {
+  it("uses valid model order while discarding unknown and duplicate IDs", () => {
+    const merged = mergeExplanationResponse("radio transient expertise", candidates, {
       message: {
         content: JSON.stringify({
           recommendations: [
@@ -168,28 +188,72 @@ describe("Puter explanation merging", () => {
     });
 
     expect(merged.map((candidate) => candidate.id)).toEqual([
-      "researcher_006",
       "researcher_003",
+      "researcher_006",
     ]);
     expect(merged.map((candidate) => candidate.reason)).toEqual([
-      "AI reason for Aisha.",
       "AI reason for Priya.",
+      "AI reason for Aisha.",
+    ]);
+    expect(merged.map((candidate) => candidate.isSuggestedContact)).toEqual([
+      true,
+      undefined,
     ]);
   });
 
-  it("retains deterministic reasons for candidates missing from valid output", () => {
-    const merged = mergeExplanationResponse(candidates, {
+  it("appends omitted candidates in deterministic order with their original reasons", () => {
+    const merged = mergeExplanationResponse("population modelling", candidates, {
       message: {
         content: JSON.stringify({
           recommendations: [
-            { researcherId: "researcher_006", reason: "Grounded AI reason." },
+            { researcherId: "researcher_003", reason: "Grounded AI reason." },
           ],
         }),
       },
     });
 
+    expect(merged.map((candidate) => candidate.id)).toEqual([
+      "researcher_003",
+      "researcher_006",
+    ]);
     expect(merged[0]?.reason).toBe("Grounded AI reason.");
-    expect(merged[1]?.reason).toBe("Deterministic Priya reason.");
+    expect(merged[1]?.reason).toBe("Deterministic Aisha reason.");
+  });
+
+  it("preserves exact-name precedence over model ordering", () => {
+    const merged = mergeExplanationResponse("Aisha Rahman", candidates, {
+      message: {
+        content: JSON.stringify({
+          recommendations: [
+            { researcherId: "researcher_003", reason: "AI reason for Priya." },
+            { researcherId: "researcher_006", reason: "AI reason for Aisha." },
+          ],
+        }),
+      },
+    });
+
+    expect(merged.map((candidate) => candidate.id)).toEqual([
+      "researcher_006",
+      "researcher_003",
+    ]);
+    expect(merged[0]).toMatchObject({
+      reason: "AI reason for Aisha.",
+      isSuggestedContact: true,
+    });
+  });
+
+  it("keeps deterministic ranking when no valid candidate is returned", () => {
+    const merged = mergeExplanationResponse("radio transient", candidates, {
+      message: {
+        content: JSON.stringify({
+          recommendations: [
+            { researcherId: "invented-person", reason: "Unsupported." },
+          ],
+        }),
+      },
+    });
+
+    expect(merged).toEqual(candidates);
   });
 
   it("sends only supplied candidates and grounded evidence for explanations", async () => {
@@ -208,22 +272,46 @@ describe("Puter explanation merging", () => {
       content: string;
     }>;
     const userPayload = JSON.parse(messages[1]?.content ?? "{}") as {
-      candidates: Array<{ researcherId: string }>;
+      candidates: Array<{
+        researcherId: string;
+        publications: Array<{ id: string; dataSource: string }>;
+      }>;
     };
 
     expect(userPayload.candidates.map((candidate) => candidate.researcherId)).toEqual([
       "researcher_006",
       "researcher_003",
     ]);
+    expect(userPayload.candidates[0]?.publications).toEqual([
+      expect.objectContaining({
+        id: "orcid_work_006_01",
+        publicationDate: "2026-01-29",
+        dataSource: "mock",
+      }),
+    ]);
+    expect(messages[0]?.content).toContain("listed demo publication");
+    expect(messages[0]?.content).toContain("primary evidence");
     expect(client.chat.mock.calls[0]?.[1]).toMatchObject({
       model: DEFAULT_PUTER_AI_MODEL,
       temperature: 0,
     });
   });
 
+  it("times out an unresponsive re-ranking call for deterministic fallback", async () => {
+    vi.useFakeTimers();
+    const client = {
+      chat: vi.fn().mockReturnValue(new Promise(() => undefined)),
+    };
+    const explanation = explainCandidates("radio transient", candidates, client);
+    const rejection = expect(explanation).rejects.toThrow("timed out");
+
+    await vi.advanceTimersByTimeAsync(PUTER_AI_TIMEOUT_MS);
+    await rejection;
+  });
+
   it("rejects missing reasons and malformed explanation output", () => {
     expect(() =>
-      mergeExplanationResponse(candidates, {
+      mergeExplanationResponse("fast radio burst", candidates, {
         message: {
           content: '{"recommendations":[{"researcherId":"researcher_006"}]}',
         },

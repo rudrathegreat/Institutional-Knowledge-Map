@@ -17,6 +17,8 @@ function researcher(
   return {
     id,
     slug: name.toLocaleLowerCase("en").replaceAll(" ", "-"),
+    orcidId: null,
+    orcidIdStatus: null,
     name,
     title: "Research Fellow",
     role: "Researcher",
@@ -35,6 +37,8 @@ describe("people graph derivation", () => {
   it("builds the seeded graph deterministically with explainable sparse edges", () => {
     const researchers: Researcher[] = seededResearchers.map((person) => ({
       ...person,
+      orcidId: null,
+      orcidIdStatus: null,
       searchDocument: "",
       embedding: null,
     }));

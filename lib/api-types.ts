@@ -1,9 +1,18 @@
+export interface PublicationEvidencePayload {
+  id: string;
+  title: string;
+  workType: string;
+  publicationDate: string;
+  dataSource: "mock" | "orcid";
+}
+
 export interface SearchEvidencePayload {
   biography: string;
   methods: string[];
   instruments: string[];
   software: string[];
   keywords: string[];
+  publications: PublicationEvidencePayload[];
 }
 
 export interface SearchResultPayload {
@@ -14,6 +23,7 @@ export interface SearchResultPayload {
   role: string;
   researchAreas: string[];
   reason: string;
+  isSuggestedContact?: boolean;
   evidence: SearchEvidencePayload;
 }
 

@@ -1,5 +1,5 @@
-import type { Researcher } from "@/db/schema";
-import { researchers } from "@/db/schema";
+import type { OrcidWork, Researcher } from "@/db/schema";
+import { orcidWorks, researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { normalizeSearchText } from "@/lib/search-text";
 
@@ -37,6 +37,7 @@ export const MAX_INTERPRETED_TERMS = 12;
 export const MAX_INTERPRETED_TERM_LENGTH = 100;
 export const EXPANDED_TERM_WEIGHT = 0.35;
 export const RESULT_LIMIT = 5;
+export const MAX_PUBLICATION_SCORE = 45;
 
 export interface SearchEvidence {
   biography: string;
@@ -44,6 +45,12 @@ export interface SearchEvidence {
   instruments: string[];
   software: string[];
   keywords: string[];
+  publications: Array<
+    Pick<
+      OrcidWork,
+      "id" | "title" | "workType" | "publicationDate" | "dataSource"
+    >
+  >;
 }
 
 export interface SearchResult {
@@ -62,7 +69,15 @@ interface RankedResearcher {
   score: number;
   matchedFieldCount: number;
   matchedEvidence: string[];
+  matchedPublications: OrcidWork[];
+  rawProfileScore: number;
+  publicationScore: number;
   exactNameMatch: boolean;
+}
+
+interface RankedPublications {
+  score: number;
+  matches: OrcidWork[];
 }
 
 function getQueryTokens(normalizedQuery: string): string[] {
@@ -185,7 +200,53 @@ function rankResearcher(
     score,
     matchedFieldCount: matchedFields.size,
     matchedEvidence: [...matchedEvidence.values()],
+    matchedPublications: [],
+    rawProfileScore: score,
+    publicationScore: 0,
     exactNameMatch,
+  };
+}
+
+export function scorePublicationEvidence(
+  publications: OrcidWork[],
+  normalizedQuery: string,
+  tokens: string[],
+): RankedPublications {
+  const rankedMatches = publications
+    .map((publication) => {
+      const normalizedTitle = normalizeSearchText(publication.title);
+      let score = 0;
+
+      if (normalizedTitle === normalizedQuery) {
+        score += 45;
+      } else if (normalizedTitle.includes(normalizedQuery)) {
+        score += 30;
+      }
+
+      for (const token of tokens) {
+        if (normalizedTitle.includes(token)) {
+          score += 3;
+        }
+      }
+
+      return { publication, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        right.publication.publicationDate.localeCompare(
+          left.publication.publicationDate,
+        ) ||
+        left.publication.title.localeCompare(right.publication.title),
+    );
+
+  return {
+    score: Math.min(
+      MAX_PUBLICATION_SCORE,
+      rankedMatches.reduce((total, { score }) => total + score, 0),
+    ),
+    matches: rankedMatches.map(({ publication }) => publication),
   };
 }
 
@@ -200,6 +261,13 @@ function formatEvidence(values: string[]): string {
 function buildReason(ranked: RankedResearcher): string {
   if (ranked.exactNameMatch) {
     return "Their name is an exact match for your search.";
+  }
+
+  if (
+    ranked.matchedPublications.length > 0 &&
+    ranked.publicationScore >= ranked.rawProfileScore
+  ) {
+    return `A recent listed demo publication, “${ranked.matchedPublications[0].title}”, matches your search.`;
   }
 
   if (ranked.matchedEvidence.length > 0) {
@@ -267,6 +335,7 @@ export function rankResearchers(
   records: Researcher[],
   query: string,
   interpretedTerms: string[] = [],
+  publications: OrcidWork[] = [],
 ): SearchResult[] {
   const normalizedQuery = normalizeSearchText(query);
 
@@ -276,10 +345,33 @@ export function rankResearchers(
 
   const validInterpretedTerms = validateInterpretedTerms(records, interpretedTerms);
   const queryTokens = getQueryTokens(normalizedQuery);
+  const publicationsByResearcherId = new Map<string, OrcidWork[]>();
+
+  for (const publication of publications) {
+    const researcherPublications =
+      publicationsByResearcherId.get(publication.researcherId) ?? [];
+    researcherPublications.push(publication);
+    publicationsByResearcherId.set(publication.researcherId, researcherPublications);
+  }
+
+  for (const researcherPublications of publicationsByResearcherId.values()) {
+    researcherPublications.sort(
+      (left, right) =>
+        right.publicationDate.localeCompare(left.publicationDate) ||
+        left.title.localeCompare(right.title),
+    );
+  }
 
   return records
     .map((researcher) => {
       const rawRank = rankResearcher(researcher, normalizedQuery, queryTokens);
+      const researcherPublications =
+        publicationsByResearcherId.get(researcher.id) ?? [];
+      const publicationRank = scorePublicationEvidence(
+        researcherPublications,
+        normalizedQuery,
+        queryTokens,
+      );
       const matchedEvidence = new Map(
         rawRank.matchedEvidence.map((value) => [normalizeSearchText(value), value]),
       );
@@ -303,9 +395,17 @@ export function rankResearchers(
 
       return {
         ...rawRank,
-        score: rawRank.score + EXPANDED_TERM_WEIGHT * expandedScore,
-        matchedFieldCount: rawRank.matchedFieldCount + expandedFieldCount,
+        score:
+          rawRank.score +
+          publicationRank.score +
+          EXPANDED_TERM_WEIGHT * expandedScore,
+        matchedFieldCount:
+          rawRank.matchedFieldCount +
+          expandedFieldCount +
+          Number(publicationRank.matches.length > 0),
         matchedEvidence: [...matchedEvidence.values()],
+        matchedPublications: publicationRank.matches,
+        publicationScore: publicationRank.score,
       };
     })
     .filter((ranked) => ranked.score > 0)
@@ -331,6 +431,17 @@ export function rankResearchers(
         instruments: ranked.researcher.instruments,
         software: ranked.researcher.software,
         keywords: ranked.researcher.keywords,
+        publications: (publicationsByResearcherId.get(ranked.researcher.id) ?? [])
+          .slice(0, 3)
+          .map(
+            ({ id, title, workType, publicationDate, dataSource }) => ({
+              id,
+              title,
+              workType,
+              publicationDate,
+              dataSource,
+            }),
+          ),
       },
     }));
 }
@@ -344,6 +455,8 @@ export function searchResearchers(
   query: string,
   interpretedTerms: string[] = [],
 ): SearchResult[] {
-  const records = getDatabase().select().from(researchers).all();
-  return rankResearchers(records, query, interpretedTerms);
+  const db = getDatabase();
+  const records = db.select().from(researchers).all();
+  const publications = db.select().from(orcidWorks).all();
+  return rankResearchers(records, query, interpretedTerms, publications);
 }

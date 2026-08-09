@@ -10,6 +10,9 @@ export function SearchResult({ result }: SearchResultProps) {
   return (
     <article className="searchResult">
       <header className="resultHeader">
+        {result.isSuggestedContact && (
+          <p className="suggestedContact">Suggested first contact</p>
+        )}
         <h2>
           <Link href={`/people/${result.slug}`}>{result.name}</Link>
         </h2>

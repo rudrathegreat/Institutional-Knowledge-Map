@@ -1,7 +1,7 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
-import type { Researcher } from "@/db/schema";
-import { researchers } from "@/db/schema";
+import type { OrcidWork, Researcher } from "@/db/schema";
+import { orcidWorks, researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 
 export function listPeople(): Researcher[] {
@@ -12,10 +12,26 @@ export function listPeople(): Researcher[] {
     .all();
 }
 
-export function getPersonBySlug(slug: string): Researcher | undefined {
-  return getDatabase()
+export type PersonProfile = Researcher & { publications: OrcidWork[] };
+
+export function getPersonBySlug(slug: string): PersonProfile | undefined {
+  const db = getDatabase();
+  const person = db
     .select()
     .from(researchers)
     .where(eq(researchers.slug, slug))
     .get();
+
+  if (!person) {
+    return undefined;
+  }
+
+  const publications = db
+    .select()
+    .from(orcidWorks)
+    .where(eq(orcidWorks.researcherId, person.id))
+    .orderBy(desc(orcidWorks.publicationDate), asc(orcidWorks.title))
+    .all();
+
+  return { ...person, publications };
 }

@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import type { Researcher } from "@/db/schema";
+import type { OrcidWork, Researcher } from "@/db/schema";
 import {
   buildSearchDocument,
   type MockResearcher,
 } from "@/lib/researcher-data";
-import { loadMockResearchers } from "@/lib/seed";
+import { loadMockOrcidRecords, loadMockResearchers } from "@/lib/seed";
 import {
   buildExpertiseVocabulary,
+  MAX_PUBLICATION_SCORE,
   normalizeSearchText,
   rankResearchers,
+  scorePublicationEvidence,
   validateInterpretedTerms,
 } from "@/lib/search";
 
@@ -17,9 +19,21 @@ const mockResearchers = loadMockResearchers();
 const records: Researcher[] = mockResearchers.map(
   (researcher: MockResearcher) => ({
     ...researcher,
+    orcidId: null,
+    orcidIdStatus: null,
     searchDocument: buildSearchDocument(researcher),
     embedding: null,
   }),
+);
+const publications: OrcidWork[] = loadMockOrcidRecords().flatMap((record) =>
+  record.works.map((work) => ({
+    ...work,
+    researcherId: record.researcherId,
+    externalIdType: null,
+    externalIdValue: null,
+    externalUrl: null,
+    dataSource: "mock" as const,
+  })),
 );
 
 describe("lexical researcher ranking", () => {
@@ -77,6 +91,9 @@ describe("lexical researcher ranking", () => {
     expect(vocabulary).toContain("MeerKAT");
     expect(vocabulary).toContain("TEMPO2");
     expect(vocabulary).not.toContain("Maya Chen");
+    expect(vocabulary).not.toContain(
+      "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
+    );
     expect(vocabulary.filter((term) => term === "Python")).toHaveLength(1);
   });
 
@@ -101,6 +118,38 @@ describe("lexical researcher ranking", () => {
     ).toBe("researcher_006");
   });
 
+  it("finds and explains a researcher from publication-title evidence", () => {
+    const results = rankResearchers(
+      records,
+      "chromatic scintillation arcs",
+      [],
+      publications,
+    );
+
+    expect(results[0]?.id).toBe("researcher_002");
+    expect(results[0]?.reason).toContain("recent listed demo publication");
+    expect(results[0]?.reason).toContain("Chromatic scintillation arcs");
+  });
+
+  it("caps accumulated publication-title evidence", () => {
+    const repeatedMatches = Array.from({ length: 20 }, (_, index) => ({
+      ...publications[0],
+      id: `repeated-${index}`,
+      title: `Radio timing study ${index}`,
+    }));
+
+    expect(
+      scorePublicationEvidence(repeatedMatches, "radio", ["radio"]).score,
+    ).toBe(MAX_PUBLICATION_SCORE);
+  });
+
+  it("keeps curated expertise stronger than a publication token match", () => {
+    const results = rankResearchers(records, "scintillation", [], publications);
+
+    expect(results[0]?.id).toBe("researcher_002");
+    expect(results[0]?.reason).toContain("stored profile");
+  });
+
   it("weights expanded evidence below raw-query evidence", () => {
     const results = rankResearchers(records, "pulsar timing", [
       "scintillation analysis",
@@ -121,7 +170,7 @@ describe("lexical researcher ranking", () => {
   });
 
   it("returns the stored evidence needed for grounded explanations", () => {
-    const result = rankResearchers(records, "Maya Chen")[0];
+    const result = rankResearchers(records, "Maya Chen", [], publications)[0];
 
     expect(result?.evidence).toMatchObject({
       biography: expect.stringContaining("long-baseline pulsar timing"),
@@ -129,6 +178,13 @@ describe("lexical researcher ranking", () => {
       instruments: expect.arrayContaining(["MeerKAT"]),
       software: expect.arrayContaining(["TEMPO2"]),
       keywords: expect.arrayContaining(["timing noise"]),
+      publications: expect.arrayContaining([
+        expect.objectContaining({
+          title:
+            "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
+          dataSource: "mock",
+        }),
+      ]),
     });
   });
 });

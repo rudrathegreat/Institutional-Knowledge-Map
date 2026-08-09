@@ -9,8 +9,8 @@ The system only needs to:
 1. store mock researcher records;
 2. accept a search query;
 3. use browser-side AI to map ordinary language to controlled expertise terms;
-4. rank matching researchers;
-5. optionally ask Puter AI in the browser to explain the matches;
+4. rank matching researchers deterministically;
+5. optionally ask Puter AI in the browser to re-rank and explain the retrieved candidates;
 6. return the results.
 7. list researchers for directory browsing;
 8. return one researcher profile by stable slug;
@@ -44,10 +44,10 @@ No ingestion system, MCP server, vector database, graph database, agent framewor
                  candidate people
                           │
                           ▼
-             optional Puter explanation
+           optional Puter re-ranking
                           │
                           ▼
-                 relevance reasons
+          validated order and reasons
                           │
                           ▼
                       response UI
@@ -120,7 +120,7 @@ The Network page remains a server component for SQLite access. It derives serial
 
 Use SQLite.
 
-The MVP only requires researcher data.
+The MVP stores curated researcher data plus repository-controlled mock ORCID works.
 
 A simple schema is sufficient.
 
@@ -131,6 +131,8 @@ Recommended fields:
 ```text
 id
 slug
+orcid_id
+orcid_id_status
 name
 title
 role
@@ -146,9 +148,9 @@ embedding_json
 
 `embedding_json` remains nullable for schema compatibility and is deliberately unused. Seeded rows store `null`; this architecture does not generate or compare vectors.
 
-A single table is acceptable for the MVP.
+### `orcid_works`
 
-Normalisation into multiple tables is not required unless it significantly simplifies implementation.
+Mock publications are stored separately so one researcher can have multiple works and a future ORCID adapter can populate the same internal shape. Each row stores its researcher ID, title, work type, publication date, optional external identifier and URL, and data source. The current fixture always uses `mock` and supplies no external links.
 
 ---
 
@@ -170,6 +172,8 @@ Biography: ...
 
 The same structured fields also produce the controlled expertise vocabulary sent to the search client. Names and biography prose are not vocabulary entries.
 
+Publication titles are not added to the controlled vocabulary or the stored search document. They are scored separately as capped, low-weight evidence.
+
 ---
 
 ## 7. Mock Data
@@ -178,9 +182,10 @@ The repository contains:
 
 ```text
 data/researchers.json
+data/orcid-records.json
 ```
 
-Use approximately 25–40 fictional researchers with overlapping expertise.
+Use approximately 25–40 fictional researchers with overlapping expertise. The ORCID fixture gives each of the 30 current people one clearly non-production mock iD and three fictional recent papers.
 
 A seed command populates SQLite:
 
@@ -188,7 +193,7 @@ A seed command populates SQLite:
 npm run db:seed
 ```
 
-The seed process inserts researcher records deterministically with `embedding_json` set to `null`. Seeding performs no AI or network calls.
+The seed process inserts researchers and mock works deterministically with `embedding_json` set to `null`. It validates complete person coverage and unique identifiers before inserting. Seeding performs no AI or network calls.
 
 ---
 
@@ -230,9 +235,12 @@ Lexical retrieval should inspect:
 - methods;
 - instruments;
 - software;
-- keywords.
+- keywords;
+- recent publication titles, at a lower and capped weight.
 
 Exact name matches should receive a strong ranking boost.
+
+Publication evidence contributes at most 45 points per person. Exact profile fields remain stronger, publication titles do not alter the controlled vocabulary, and publication overlap never creates Network edges.
 
 A query such as:
 
@@ -302,7 +310,7 @@ Do not expose numerical relevance scores to users.
 
 ### Core rule
 
-Puter does not create or directly retrieve researcher records. It may propose only terms from the supplied vocabulary; the server validates those terms again and SQLite remains the identity source of truth.
+Puter does not create or directly retrieve researcher records. Before retrieval it may propose only terms from the supplied vocabulary, and after retrieval it may reorder only the supplied candidates. The server validates interpreted terms, the browser validates candidate IDs and order, and SQLite remains the identity source of truth.
 
 The browser may interpret a query into controlled terms before retrieval. The explanation call always happens after the server has retrieved the candidate records.
 
@@ -317,14 +325,21 @@ SQLite deterministic ranking
   ↓
 top candidate researchers
   ↓
-Puter grounded explanations (optional)
+Puter grounded candidate re-ranking and explanations (optional)
+  ↓
+validated query-specific contact order
 ```
 
 The explanation call receives only:
 
 - the original user query;
 - the small candidate set;
-- stored profile fields for those candidates.
+- stored profile fields for those candidates;
+- up to three newest mock publication summaries for those candidates.
+
+The re-ranking prompt treats curated biographies and structured expertise as primary evidence. It may use publication titles and dates only as fictional ORCID-style supporting evidence of recent topical relevance or to distinguish close candidates, and it prevents claims beyond the supplied titles.
+
+Puter must return every supplied candidate in its preferred order. Browser validation discards unknown and duplicate IDs, appends omitted candidates in their original deterministic order, and keeps the original reason for every appended candidate. If the raw query exactly matches a researcher name, that person is moved back to first position after validation.
 
 ---
 
@@ -351,16 +366,20 @@ The separate explanation response is:
 {
   "recommendations": [
     {
-      "researcher_id": "researcher_017",
+      "researcherId": "researcher_017",
       "reason": "Their stored profile includes work on pulsars and interstellar scintillation."
+    },
+    {
+      "researcherId": "researcher_004",
+      "reason": "Their listed demo publication supports recent relevance to this specific query."
     }
   ]
 }
 ```
 
-The browser validates this output with Zod before rendering it.
+The browser validates this output with Zod before rendering it. A response containing at least one valid candidate produces a complete validated order; the first candidate is marked `Suggested first contact`. This label is query-specific guidance, not a claim that the person is objectively the best or most qualified researcher.
 
-The model cannot introduce new researcher IDs.
+The model cannot introduce new researcher IDs, remove server candidates, or override exact-name precedence.
 
 ---
 
@@ -382,7 +401,7 @@ display candidates without generated explanation
 
 The core search experience must still work.
 
-If Puter authentication is cancelled, allowance is exhausted, the configured model is unavailable, or either call fails, the application uses raw lexical results and deterministic evidence-based reasons.
+If Puter authentication is cancelled, allowance is exhausted, the configured model is unavailable, or either call fails, the application preserves the complete deterministic server order and evidence-based reasons. Malformed or empty re-ranking output does not produce a suggested-contact badge.
 
 ---
 
@@ -478,9 +497,9 @@ Keep the nullable embedding column for compatibility, but leave it unused. No ve
 
 The application assumes the database is already populated.
 
-Future ingestion may eventually transform public institutional profiles into the same researcher schema.
+Future ingestion may eventually transform public institutional profiles and ORCID works into the same internal schemas.
 
-That future system is outside this repository and outside this MVP.
+The current `orcid-records.json` fixture is local-only. Live ORCID API access, OAuth, external publication links, scheduled refreshes, and automated synchronisation remain outside this repository and outside this MVP.
 
 ---
 
