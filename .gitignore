@@ -1,1 +1,21 @@
 handbook/
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+coverage/
+
+# Local environment files
+.env*
+!.env.example
+
+# Generated SQLite databases
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Tooling
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
