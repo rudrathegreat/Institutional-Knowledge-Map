@@ -32,4 +32,20 @@ describe("SiteHeader", () => {
     );
     expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeInTheDocument();
   });
+
+  it("marks Network as active on the network page", () => {
+    vi.mocked(usePathname).mockReturnValue("/network");
+    render(<SiteHeader />);
+
+    expect(screen.getByRole("link", { name: "Network" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Search" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "People" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
 });

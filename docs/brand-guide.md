@@ -53,7 +53,7 @@ Results state
 New search
 ```
 
-Use a restrained persistent header with Search and People navigation. Do not add a sidebar.
+Use a restrained persistent header with Search, People, and Network navigation. Do not add a persistent navigation sidebar.
 
 ---
 
@@ -453,7 +453,17 @@ On mobile:
 - keep the search input full width;
 - stack result content naturally.
 
-Keep the same compact Search and People links on mobile; no separate menu is required.
+Keep the same compact Search, People, and Network links on mobile; no separate menu is required.
+
+### Network surface
+
+Keep the network quiet and functional rather than decorative:
+
+- use equal-sized person nodes so size does not imply seniority or influence;
+- use restrained edge widths to indicate relative shared-expertise strength;
+- highlight only the selected person or edge and its immediate neighbourhood;
+- pair the canvas with a compact evidence inspector and name-based navigation;
+- state clearly that an edge does not establish collaboration or reporting lines.
 
 ---
 
@@ -467,6 +477,7 @@ Minimum requirements:
 - Enter-to-search support;
 - correctly labelled buttons;
 - screen-reader-readable loading and error states;
+- an HTML path for finding people and traversing network connections without relying on the canvas;
 - no colour-only meaning.
 
 ---
@@ -511,10 +522,9 @@ Discover the power of your research network
 Do not build:
 
 - dashboard cards;
-- sidebars;
-- related-people panels;
-- network maps;
-- graph visualisations;
+- persistent navigation sidebars;
+- social-network or organisational-status styling;
+- topic or knowledge nodes;
 - feeds;
 - social UI;
 - chat bubbles;
@@ -524,7 +534,6 @@ Do not build:
 - neon effects;
 - animated backgrounds;
 - large illustrations;
-- navigation beyond Search and People;
 - marketing sections.
 
 ---

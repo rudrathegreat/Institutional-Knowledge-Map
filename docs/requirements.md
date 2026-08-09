@@ -2,11 +2,13 @@
 
 ## 1. Scope
 
-The product contains two complementary user workflows:
+The product contains three complementary user workflows:
 
 > **Enter a query and receive relevant people with concise, grounded explanations.**
 
 > **Browse all people and open a detailed profile grounded in stored researcher data.**
+
+> **Explore shared expertise connections between people and navigate to their profiles.**
 
 ---
 
@@ -218,6 +220,23 @@ Every researcher must have a stable, human-readable profile URL. Profiles must s
 - Unknown slugs return a controlled 404 page.
 - Profile metadata identifies the person.
 - Slugs remain unique and deterministic across reseeding.
+
+---
+
+## FR-013 — People Network
+
+The application must provide a separate Network tab containing every stored researcher as an equal-sized node. Edges must be derived deterministically from shared research areas, methods, keywords, instruments, and software, and must never be described as proof of collaboration or organisational relationships.
+
+Users must be able to pan, zoom, drag, find a person by name, inspect people and edges, traverse immediate connections, and open the same stable person profiles used by Search and People.
+
+### Acceptance tests
+
+- Every stored researcher appears exactly once, including researchers with no meaningful connection.
+- Generic values occurring in more than half of profiles are excluded from connection evidence.
+- Each connected person contributes their two strongest candidates before edges are unioned and deduplicated.
+- Every edge exposes at least one shared stored value.
+- Name search and the HTML inspector remain usable if the graph renderer fails.
+- Connection copy explicitly distinguishes expertise overlap from collaboration.
 
 ---
 
@@ -512,10 +531,9 @@ in different words.
 
 Do not implement:
 
-- related-people recommendations;
-- researcher map;
-- relationship graph;
-- filters;
+- curated collaboration or reporting relationships;
+- topic or knowledge nodes;
+- advanced graph filters;
 - dashboards;
 - authentication;
 - user accounts;
@@ -552,7 +570,9 @@ The repository should test:
 11. strict and fenced JSON model output validation;
 12. search results contain only database researchers;
 13. evidence payloads and the 20-per-minute IP rate limit;
-14. browser interpretation, topic, notice, and explanation rendering.
+14. browser interpretation, topic, notice, and explanation rendering;
+15. deterministic graph scoring, generic-term suppression, and edge deduplication;
+16. network search, inspection, controls, and renderer-failure fallback.
 
 ---
 
@@ -576,6 +596,8 @@ and demonstrate:
 6. graceful raw-lexical and deterministic-reason fallback when Puter fails;
 7. an alphabetical directory containing every researcher;
 8. stable profile links from both the directory and search results;
-9. a complete stored-data profile for every researcher.
+9. a complete stored-data profile for every researcher;
+10. an interactive Network tab with explainable shared-expertise links;
+11. accessible name-based navigation when the graph canvas is unavailable.
 
 The MVP is not complete if additional product features have displaced effort from this core flow.

@@ -13,7 +13,8 @@ The system only needs to:
 5. optionally ask Puter AI in the browser to explain the matches;
 6. return the results.
 7. list researchers for directory browsing;
-8. return one researcher profile by stable slug.
+8. return one researcher profile by stable slug;
+9. derive a sparse, deterministic people network from structured profile fields.
 
 No ingestion system, MCP server, vector database, graph database, agent framework, or separate backend service is required.
 
@@ -66,6 +67,7 @@ Recommended stack:
 - SQLite
 - Drizzle ORM or similarly lightweight ORM
 - `@heyputer/puter.js`, dynamically imported in the browser
+- Cytoscape.js for the route-scoped interactive network renderer
 - explicit `google/gemini-3.1-flash-lite` model selection
 
 Do not create a separate backend application.
@@ -81,17 +83,21 @@ institutional-expertise-navigator/
 │
 ├── app/
 │   ├── page.tsx
+│   ├── network/
+│   │   └── page.tsx
 │   └── api/
 │       └── search/
 │
 ├── components/
 │   ├── SearchBar.tsx
-│   └── SearchResult.tsx
+│   ├── SearchResult.tsx
+│   └── PeopleNetwork.tsx
 │
 ├── lib/
 │   ├── db.ts
 │   ├── search.ts
 │   ├── search-text.ts
+│   ├── people-graph.ts
 │   └── puter-ai.ts
 │
 ├── data/
@@ -104,7 +110,9 @@ institutional-expertise-navigator/
 └── tests/
 ```
 
-The only secondary application surfaces are the people directory and database-backed person profiles.
+The secondary application surfaces are the people directory, database-backed person profiles, and the Network tab.
+
+The Network page remains a server component for SQLite access. It derives serializable nodes and edges in-process, then passes them to a focused client component that owns Cytoscape lifecycle and interaction state. No graph API or graph database is introduced.
 
 ---
 
@@ -422,7 +430,7 @@ Response:
 }
 ```
 
-No additional JSON API is required. Directory and profile pages read SQLite directly from server components.
+No additional JSON API is required. Directory, profile, and Network pages read SQLite directly from server components.
 
 ---
 

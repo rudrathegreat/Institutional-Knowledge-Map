@@ -7,6 +7,8 @@ export function SiteHeader() {
   const pathname = usePathname();
   const peopleIsActive =
     pathname === "/people" || pathname.startsWith("/people/");
+  const networkIsActive =
+    pathname === "/network" || pathname.startsWith("/network/");
 
   return (
     <header className="siteHeader">
@@ -29,6 +31,13 @@ export function SiteHeader() {
             aria-current={peopleIsActive ? "page" : undefined}
           >
             People
+          </Link>
+          <Link
+            href="/network"
+            className="siteNavLink"
+            aria-current={networkIsActive ? "page" : undefined}
+          >
+            Network
           </Link>
         </nav>
       </div>

@@ -2,7 +2,7 @@
 
 A focused institutional expertise directory that helps users answer one question: **Who should I talk to?**
 
-The application provides Puter-assisted natural-language search, an alphabetical people directory, and detailed person profiles backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary and generates evidence-grounded match explanations; deterministic lexical search remains available whenever AI is unavailable.
+The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary and generates evidence-grounded match explanations; deterministic lexical search remains available whenever AI is unavailable.
 
 ## Run locally
 
@@ -48,12 +48,14 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Search across names, roles, biographies, research areas, methods, instruments, software, and keywords
 - Ranked database-backed people results with grounded AI reasons and deterministic fallbacks
 - Twenty searches per IP per minute on the SQLite search endpoint
-- Persistent Search and People navigation
+- Persistent Search, People, and Network navigation
 - Alphabetical directory of every stored researcher
 - Stable, human-readable profile URLs with detailed expertise information
+- Interactive people network derived deterministically from shared profile fields
+- Name-based graph navigation, connection evidence, and profile links
 - Loading, validation, error, and empty-result states
 - Repository-controlled fictional seed data with 30 detailed biographies
 
-The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, directory filters, related-people recommendations, application-managed authentication, embeddings, and vector databases are not included in this milestone.
+The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, advanced network filters, curated collaboration data, application-managed authentication, embeddings, and vector databases are not included in this milestone.
 
 All researcher identities and biographies in the seed data are fictional. Any resemblance to a real person is coincidental.

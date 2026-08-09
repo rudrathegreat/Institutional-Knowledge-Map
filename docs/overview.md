@@ -52,7 +52,7 @@ The MVP uses the same interface for both.
 
 ## 5. The Entire User Experience
 
-The application has a primary search screen plus a lightweight people directory and person profiles, connected by persistent Search and People navigation.
+The application has a primary search screen plus a lightweight people directory, person profiles, and an expertise network, connected by persistent Search, People, and Network navigation.
 
 ```text
                 Who should I talk to?
@@ -123,7 +123,8 @@ The MVP contains only the following product features:
 7. Graceful fallback to non-AI search results when AI explanation generation fails.
 8. An alphabetical directory of all stored researchers.
 9. Detailed person profiles linked from the directory and search results.
-10. Mock researcher data stored in a simple relational database.
+10. An interactive people network derived from shared stored expertise.
+11. Mock researcher data stored in a simple relational database.
 
 ---
 
@@ -225,11 +226,9 @@ The following must not be implemented in the MVP.
 
 ### Additional product surfaces
 
-- related-people recommendations;
-- researcher maps;
-- network graphs;
-- topic maps;
-- filters;
+- topic or knowledge-node graphs;
+- curated collaboration or reporting graphs;
+- advanced network filters;
 - dashboards;
 - feeds;
 - saved searches;
@@ -300,7 +299,8 @@ The MVP is successful if it can reliably demonstrate:
 7. continuing to return basic results if the explanation model fails;
 8. never answering the user's research question instead of routing them to a person;
 9. browsing every stored person alphabetically;
-10. opening the same detailed person profile from either browsing or search.
+10. exploring explainable shared-expertise links without implying collaboration;
+11. opening the same detailed person profile from search, browsing, or the network.
 
 ---
 
