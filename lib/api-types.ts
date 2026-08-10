@@ -6,6 +6,28 @@ export interface PublicationEvidencePayload {
   dataSource: "mock" | "orcid";
 }
 
+export type SearchEvidenceOrigin = "query" | "interpreted";
+
+export type SearchEvidenceCategory =
+  | "name"
+  | "title"
+  | "role"
+  | "researchArea"
+  | "method"
+  | "instrument"
+  | "software"
+  | "keyword"
+  | "biography"
+  | "publication";
+
+export interface SearchEvidenceMatchPayload {
+  category: SearchEvidenceCategory;
+  value: string;
+  origins: SearchEvidenceOrigin[];
+  matchedTerms: string[];
+  publication?: PublicationEvidencePayload;
+}
+
 export interface SearchEvidencePayload {
   biography: string;
   methods: string[];
@@ -13,6 +35,7 @@ export interface SearchEvidencePayload {
   software: string[];
   keywords: string[];
   publications: PublicationEvidencePayload[];
+  matches: SearchEvidenceMatchPayload[];
 }
 
 export interface SearchResultPayload {

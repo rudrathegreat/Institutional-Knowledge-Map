@@ -185,6 +185,103 @@ describe("lexical researcher ranking", () => {
           dataSource: "mock",
         }),
       ]),
+      matches: expect.arrayContaining([
+        expect.objectContaining({
+          category: "name",
+          value: "Maya Chen",
+          origins: ["query"],
+        }),
+      ]),
     });
+  });
+
+  it("traces only structured values and profile sentences that contributed", () => {
+    const result = rankResearchers(records, "MeerKAT").find(
+      (candidate) => candidate.id === "researcher_001",
+    );
+
+    expect(result?.evidence.matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "instrument",
+          value: "MeerKAT",
+          origins: ["query"],
+          matchedTerms: ["MeerKAT"],
+        }),
+        expect.objectContaining({
+          category: "biography",
+          value: expect.stringContaining("MeerKAT"),
+          origins: ["query"],
+        }),
+      ]),
+    );
+    expect(result?.evidence.matches).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ category: "software", value: "TEMPO2" }),
+      ]),
+    );
+  });
+
+  it("labels interpreted-only evidence and merges overlapping provenance", () => {
+    const interpretedOnly = rankResearchers(
+      records,
+      "one-off mysterious beacon",
+      ["fast radio bursts", "dedispersion"],
+    )[0];
+    const interpretedResearchArea = interpretedOnly?.evidence.matches.find(
+      (match) =>
+        match.category === "researchArea" &&
+        match.value === "fast radio bursts",
+    );
+
+    expect(interpretedResearchArea).toMatchObject({
+      origins: ["interpreted"],
+      matchedTerms: ["fast radio bursts"],
+    });
+
+    const overlapping = rankResearchers(records, "pulsars", ["pulsars"])[0];
+    const overlappingResearchArea = overlapping?.evidence.matches.find(
+      (match) => match.category === "researchArea" && match.value === "pulsars",
+    );
+
+    expect(overlappingResearchArea).toMatchObject({
+      origins: ["query", "interpreted"],
+      matchedTerms: ["pulsars"],
+    });
+  });
+
+  it("returns matched publication metadata rather than unrelated recent works", () => {
+    const result = rankResearchers(
+      records,
+      "chromatic scintillation arcs",
+      [],
+      publications,
+    )[0];
+    const publicationMatches = result?.evidence.matches.filter(
+      (match) => match.category === "publication",
+    );
+
+    expect(publicationMatches).toEqual([
+      expect.objectContaining({
+        origins: ["query"],
+        publication: expect.objectContaining({
+          title: expect.stringContaining("Chromatic scintillation arcs"),
+          dataSource: "mock",
+        }),
+      }),
+    ]);
+  });
+
+  it("uses a matched biography sentence instead of the full profile", () => {
+    const result = rankResearchers(
+      records,
+      "turning repeated radio observations",
+    ).find((candidate) => candidate.id === "researcher_001");
+    const excerpt = result?.evidence.matches.find(
+      (match) => match.category === "biography",
+    )?.value;
+
+    expect(excerpt).toContain("turning repeated radio observations");
+    expect(excerpt).not.toBe(result?.evidence.biography);
   });
 });

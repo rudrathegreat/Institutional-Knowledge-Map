@@ -103,7 +103,8 @@ Each result must include at minimum:
 - name;
 - title or role;
 - relevant research areas or expertise;
-- concise relevance explanation when available.
+- concise relevance explanation when available;
+- a collapsed `View matching evidence` disclosure containing only evidence that contributed to retrieval or ranking;
 - a `Suggested first contact` badge on the first result after a valid AI re-ranking response.
 
 ### Acceptance tests
@@ -112,6 +113,8 @@ Each result must include at minimum:
 - No AI-generated researcher identity can be rendered.
 - AI ordering may change card order while reasons remain attached to the correct researcher.
 - Results remain usable when explanation generation is unavailable.
+- Literal-query matches and interpreted-term-only matches are labelled separately without duplicating evidence.
+- The disclosure supports pointer and keyboard interaction through native disclosure semantics.
 
 ---
 
@@ -130,8 +133,8 @@ Puter must return structured JSON containing:
 - Puter can only reference candidate researcher IDs supplied by the server.
 - Returned IDs and ordering are validated before display; unknown and duplicate IDs are discarded.
 - Candidates omitted by the model are appended in their original server order with deterministic reasons.
-- Explanations must be based on stored researcher evidence.
-- Up to three stored mock publication titles and dates may be supplied as candidate-bound supporting evidence.
+- Explanations must be based only on the traced stored evidence that contributed to retrieval or ranking.
+- Matched mock publication titles, dates, types, and data-source labels may be supplied as candidate-bound supporting evidence.
 - Invalid model output is handled without crashing the search flow.
 
 ---

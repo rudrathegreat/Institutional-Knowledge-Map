@@ -143,6 +143,7 @@ button:disabled {
 .siteBrand:focus-visible,
 .siteNavLink:focus-visible,
 .resultHeader a:focus-visible,
+.evidenceDisclosure summary:focus-visible,
 .directoryPersonLink:focus-visible,
 .backLink:focus-visible,
 .primaryLink:focus-visible,
@@ -460,6 +461,127 @@ button:disabled {
   color: var(--secondary-text);
   font-size: 15px;
   line-height: 1.6;
+}
+
+.evidenceDisclosure {
+  max-width: 680px;
+  margin-top: 17px;
+}
+
+.evidenceDisclosure summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.evidenceDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidenceDisclosure summary::after {
+  content: "+";
+  width: 18px;
+  color: var(--secondary-text);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+}
+
+.evidenceDisclosure[open] summary::after {
+  content: "−";
+}
+
+.evidenceDisclosure summary:hover {
+  color: var(--accent-hover);
+}
+
+.evidencePanel {
+  margin-top: 15px;
+  padding: 18px 20px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.evidenceGroup + .evidenceGroup {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.evidenceGroup > h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.evidenceTerms {
+  margin: 5px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.evidenceCategory {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.evidenceCategory h4 {
+  margin: 1px 0 0;
+  color: var(--secondary-text);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.evidenceCategory ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidenceCategory li {
+  color: var(--primary-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.evidenceCategory blockquote {
+  margin: 0;
+  padding-left: 12px;
+  color: var(--secondary-text);
+  border-left: 2px solid var(--accent-subtle);
+}
+
+.publicationEvidence p {
+  margin: 0;
+}
+
+.publicationMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-top: 3px !important;
+  color: var(--secondary-text);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.evidenceSource {
+  color: #557332;
+  font-weight: 650;
 }
 
 .emptyState {
@@ -1232,6 +1354,15 @@ button:disabled {
 
   .resultHeader h2 {
     font-size: 19px;
+  }
+
+  .evidencePanel {
+    padding: 17px 16px;
+  }
+
+  .evidenceCategory {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .directoryContent,

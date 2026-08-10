@@ -1,6 +1,12 @@
 import type { OrcidWork, Researcher } from "@/db/schema";
 import { orcidWorks, researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
+import type {
+  PublicationEvidencePayload,
+  SearchEvidenceCategory,
+  SearchEvidenceMatchPayload,
+  SearchEvidenceOrigin,
+} from "@/lib/api-types";
 import { normalizeSearchText } from "@/lib/search-text";
 
 export { normalizeSearchText } from "@/lib/search-text";
@@ -51,6 +57,7 @@ export interface SearchEvidence {
       "id" | "title" | "workType" | "publicationDate" | "dataSource"
     >
   >;
+  matches: SearchEvidenceMatchPayload[];
 }
 
 export interface SearchResult {
@@ -73,11 +80,20 @@ interface RankedResearcher {
   rawProfileScore: number;
   publicationScore: number;
   exactNameMatch: boolean;
+  matchingEvidence: SearchEvidenceMatchPayload[];
 }
 
 interface RankedPublications {
   score: number;
   matches: OrcidWork[];
+}
+
+interface MutableEvidenceMatch {
+  category: SearchEvidenceCategory;
+  value: string;
+  origins: Set<SearchEvidenceOrigin>;
+  matchedTerms: Map<string, string>;
+  publication?: PublicationEvidencePayload;
 }
 
 function getQueryTokens(normalizedQuery: string): string[] {
@@ -89,41 +105,143 @@ function getQueryTokens(normalizedQuery: string): string[] {
   return meaningfulTokens.length > 0 ? meaningfulTokens : allTokens;
 }
 
+function toPublicationEvidence(publication: OrcidWork): PublicationEvidencePayload {
+  const { id, title, workType, publicationDate, dataSource } = publication;
+
+  return { id, title, workType, publicationDate, dataSource };
+}
+
+function addEvidenceMatch(
+  matches: Map<string, MutableEvidenceMatch>,
+  category: SearchEvidenceCategory,
+  value: string,
+  origin: SearchEvidenceOrigin,
+  matchedTerm: string,
+  publication?: PublicationEvidencePayload,
+): void {
+  const key = `${category}:${publication?.id ?? normalizeSearchText(value)}`;
+  const currentMatch = matches.get(key) ?? {
+    category,
+    value,
+    origins: new Set<SearchEvidenceOrigin>(),
+    matchedTerms: new Map<string, string>(),
+    publication,
+  };
+  const normalizedTerm = normalizeSearchText(matchedTerm);
+
+  currentMatch.origins.add(origin);
+  if (normalizedTerm && !currentMatch.matchedTerms.has(normalizedTerm)) {
+    currentMatch.matchedTerms.set(normalizedTerm, matchedTerm.trim());
+  }
+  matches.set(key, currentMatch);
+}
+
+function finalizeEvidenceMatches(
+  matches: Map<string, MutableEvidenceMatch>,
+): SearchEvidenceMatchPayload[] {
+  return [...matches.values()].map((match) => ({
+    category: match.category,
+    value: match.value,
+    origins: [...match.origins],
+    matchedTerms: [...match.matchedTerms.values()],
+    ...(match.publication ? { publication: match.publication } : {}),
+  }));
+}
+
+function mergeEvidenceMatches(
+  ...groups: SearchEvidenceMatchPayload[][]
+): SearchEvidenceMatchPayload[] {
+  const merged = new Map<string, MutableEvidenceMatch>();
+
+  for (const match of groups.flat()) {
+    for (const origin of match.origins) {
+      for (const term of match.matchedTerms) {
+        addEvidenceMatch(
+          merged,
+          match.category,
+          match.value,
+          origin,
+          term,
+          match.publication,
+        );
+      }
+    }
+  }
+
+  return finalizeEvidenceMatches(merged);
+}
+
+function getBiographyExcerpts(
+  biography: string,
+  normalizedQuery: string,
+  tokens: string[],
+): string[] {
+  const sentences = biography.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [biography];
+  const needles = [normalizedQuery, ...tokens].filter(Boolean);
+  const excerpts = sentences
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => {
+      const normalizedSentence = normalizeSearchText(sentence);
+      return needles.some((needle) => normalizedSentence.includes(needle));
+    });
+
+  return excerpts.length > 0 ? excerpts : [biography];
+}
+
 function rankResearcher(
   researcher: Researcher,
   normalizedQuery: string,
   tokens: string[],
+  origin: SearchEvidenceOrigin,
+  matchedTerm: string,
 ): RankedResearcher {
   let score = 0;
   const matchedFields = new Set<string>();
   const matchedEvidence = new Map<string, string>();
+  const matchingEvidence = new Map<string, MutableEvidenceMatch>();
   const normalizedName = normalizeSearchText(researcher.name);
   const exactNameMatch = normalizedName === normalizedQuery;
+  let nameMatched = false;
 
   if (exactNameMatch) {
     score += 1_000;
     matchedFields.add("name");
+    nameMatched = true;
   } else if (normalizedName.includes(normalizedQuery)) {
     score += 160;
     matchedFields.add("name");
+    nameMatched = true;
   }
 
   for (const token of tokens) {
     if (normalizedName.includes(token)) {
       score += 30;
       matchedFields.add("name");
+      nameMatched = true;
     }
   }
 
-  const structuredFields: Array<[string, string[]]> = [
-    ["research areas", researcher.researchAreas],
-    ["methods", researcher.methods],
-    ["instruments", researcher.instruments],
-    ["software", researcher.software],
-    ["keywords", researcher.keywords],
+  if (nameMatched) {
+    addEvidenceMatch(
+      matchingEvidence,
+      "name",
+      researcher.name,
+      origin,
+      matchedTerm,
+    );
+  }
+
+  const structuredFields: Array<
+    [string, SearchEvidenceCategory, string[]]
+  > = [
+    ["research areas", "researchArea", researcher.researchAreas],
+    ["methods", "method", researcher.methods],
+    ["instruments", "instrument", researcher.instruments],
+    ["software", "software", researcher.software],
+    ["keywords", "keyword", researcher.keywords],
   ];
 
-  for (const [fieldName, values] of structuredFields) {
+  for (const [fieldName, category, values] of structuredFields) {
     for (const value of values) {
       const normalizedValue = normalizeSearchText(value);
       let valueMatched = false;
@@ -146,6 +264,13 @@ function rankResearcher(
       if (valueMatched) {
         matchedFields.add(fieldName);
         matchedEvidence.set(normalizedValue, value);
+        addEvidenceMatch(
+          matchingEvidence,
+          category,
+          value,
+          origin,
+          matchedTerm,
+        );
       }
     }
   }
@@ -173,6 +298,13 @@ function rankResearcher(
 
     if (valueMatched) {
       matchedFields.add(fieldName);
+      addEvidenceMatch(
+        matchingEvidence,
+        fieldName as "title" | "role",
+        value,
+        origin,
+        matchedTerm,
+      );
     }
   }
 
@@ -193,6 +325,19 @@ function rankResearcher(
 
   if (biographyMatched) {
     matchedFields.add("biography");
+    for (const excerpt of getBiographyExcerpts(
+      researcher.biography,
+      normalizedQuery,
+      tokens,
+    )) {
+      addEvidenceMatch(
+        matchingEvidence,
+        "biography",
+        excerpt,
+        origin,
+        matchedTerm,
+      );
+    }
   }
 
   return {
@@ -204,6 +349,7 @@ function rankResearcher(
     rawProfileScore: score,
     publicationScore: 0,
     exactNameMatch,
+    matchingEvidence: finalizeEvidenceMatches(matchingEvidence),
   };
 }
 
@@ -364,7 +510,13 @@ export function rankResearchers(
 
   return records
     .map((researcher) => {
-      const rawRank = rankResearcher(researcher, normalizedQuery, queryTokens);
+      const rawRank = rankResearcher(
+        researcher,
+        normalizedQuery,
+        queryTokens,
+        "query",
+        query,
+      );
       const researcherPublications =
         publicationsByResearcherId.get(researcher.id) ?? [];
       const publicationRank = scorePublicationEvidence(
@@ -375,6 +527,7 @@ export function rankResearchers(
       const matchedEvidence = new Map(
         rawRank.matchedEvidence.map((value) => [normalizeSearchText(value), value]),
       );
+      const matchingEvidenceGroups = [rawRank.matchingEvidence];
       let expandedScore = 0;
       let expandedFieldCount = 0;
 
@@ -384,6 +537,8 @@ export function rankResearchers(
           researcher,
           normalizedTerm,
           getQueryTokens(normalizedTerm),
+          "interpreted",
+          term,
         );
         expandedScore += expandedRank.score;
         expandedFieldCount += expandedRank.matchedFieldCount;
@@ -391,7 +546,16 @@ export function rankResearchers(
         for (const value of expandedRank.matchedEvidence) {
           matchedEvidence.set(normalizeSearchText(value), value);
         }
+        matchingEvidenceGroups.push(expandedRank.matchingEvidence);
       }
+
+      const publicationEvidence = publicationRank.matches.map((publication) => ({
+        category: "publication" as const,
+        value: publication.title,
+        origins: ["query" as const],
+        matchedTerms: [query.trim()],
+        publication: toPublicationEvidence(publication),
+      }));
 
       return {
         ...rawRank,
@@ -406,6 +570,10 @@ export function rankResearchers(
         matchedEvidence: [...matchedEvidence.values()],
         matchedPublications: publicationRank.matches,
         publicationScore: publicationRank.score,
+        matchingEvidence: mergeEvidenceMatches(
+          ...matchingEvidenceGroups,
+          publicationEvidence,
+        ),
       };
     })
     .filter((ranked) => ranked.score > 0)
@@ -433,15 +601,8 @@ export function rankResearchers(
         keywords: ranked.researcher.keywords,
         publications: (publicationsByResearcherId.get(ranked.researcher.id) ?? [])
           .slice(0, 3)
-          .map(
-            ({ id, title, workType, publicationDate, dataSource }) => ({
-              id,
-              title,
-              workType,
-              publicationDate,
-              dataSource,
-            }),
-          ),
+          .map(toPublicationEvidence),
+        matches: ranked.matchingEvidence,
       },
     }));
 }

@@ -43,6 +43,29 @@ const candidates: SearchResultPayload[] = [
           dataSource: "mock",
         },
       ],
+      matches: [
+        {
+          category: "researchArea",
+          value: "fast radio bursts",
+          origins: ["interpreted"],
+          matchedTerms: ["fast radio bursts"],
+        },
+        {
+          category: "publication",
+          value:
+            "Wide-field localisation strategies for repeating fast radio bursts",
+          origins: ["query"],
+          matchedTerms: ["brief radio signal"],
+          publication: {
+            id: "orcid_work_006_01",
+            title:
+              "Wide-field localisation strategies for repeating fast radio bursts",
+            workType: "journal-article",
+            publicationDate: "2026-01-29",
+            dataSource: "mock",
+          },
+        },
+      ],
     },
   },
   {
@@ -67,6 +90,14 @@ const candidates: SearchResultPayload[] = [
           workType: "journal-article",
           publicationDate: "2026-04-21",
           dataSource: "mock",
+        },
+      ],
+      matches: [
+        {
+          category: "method",
+          value: "Bayesian inference",
+          origins: ["interpreted"],
+          matchedTerms: ["Bayesian inference"],
         },
       ],
     },
@@ -256,7 +287,7 @@ describe("Puter explanation merging", () => {
     expect(merged).toEqual(candidates);
   });
 
-  it("sends only supplied candidates and grounded evidence for explanations", async () => {
+  it("sends only supplied candidates and traced matching evidence for explanations", async () => {
     const client = {
       chat: vi.fn().mockResolvedValue({
         message: { content: '{"recommendations":[]}' },
@@ -274,7 +305,10 @@ describe("Puter explanation merging", () => {
     const userPayload = JSON.parse(messages[1]?.content ?? "{}") as {
       candidates: Array<{
         researcherId: string;
-        publications: Array<{ id: string; dataSource: string }>;
+        matchingEvidence: Array<{
+          category: string;
+          publication?: { id: string; dataSource: string };
+        }>;
       }>;
     };
 
@@ -282,15 +316,13 @@ describe("Puter explanation merging", () => {
       "researcher_006",
       "researcher_003",
     ]);
-    expect(userPayload.candidates[0]?.publications).toEqual([
-      expect.objectContaining({
-        id: "orcid_work_006_01",
-        publicationDate: "2026-01-29",
-        dataSource: "mock",
-      }),
-    ]);
+    expect(userPayload.candidates[0]?.matchingEvidence).toEqual(
+      candidates[0]?.evidence.matches,
+    );
+    expect(userPayload.candidates[0]).not.toHaveProperty("biography");
+    expect(userPayload.candidates[0]).not.toHaveProperty("publications");
     expect(messages[0]?.content).toContain("listed demo publication");
-    expect(messages[0]?.content).toContain("primary evidence");
+    expect(messages[0]?.content).toContain("exact stored evidence");
     expect(client.chat.mock.calls[0]?.[1]).toMatchObject({
       model: DEFAULT_PUTER_AI_MODEL,
       temperature: 0,

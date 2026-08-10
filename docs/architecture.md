@@ -334,10 +334,11 @@ The explanation call receives only:
 
 - the original user query;
 - the small candidate set;
-- stored profile fields for those candidates;
-- up to three newest mock publication summaries for those candidates.
+- candidate identity fields;
+- the stored values and profile excerpts that contributed to deterministic retrieval or ranking;
+- metadata for publication titles that contributed to publication scoring.
 
-The re-ranking prompt treats curated biographies and structured expertise as primary evidence. It may use publication titles and dates only as fictional ORCID-style supporting evidence of recent topical relevance or to distinguish close candidates, and it prevents claims beyond the supplied titles.
+Each traced match records its field category, literal-query or interpreted-term provenance, matched term, and stored value. Biography evidence is reduced to matched stored sentences. Duplicate raw and interpreted matches are merged, while the UI displays interpreted-only evidence separately. The re-ranking prompt treats curated profile matches as primary evidence. It may use matched publication titles and dates only as fictional ORCID-style supporting evidence of recent topical relevance or to distinguish close candidates, and it prevents claims beyond the supplied titles.
 
 Puter must return every supplied candidate in its preferred order. Browser validation discards unknown and duplicate IDs, appends omitted candidates in their original deterministic order, and keeps the original reason for every appended candidate. If the raw query exactly matches a researcher name, that person is moved back to first position after validation.
 
@@ -442,7 +443,22 @@ Response:
         "methods": ["scintillation analysis"],
         "instruments": ["MeerKAT"],
         "software": ["PSRCHIVE"],
-        "keywords": ["scintillation"]
+        "keywords": ["scintillation"],
+        "publications": [],
+        "matches": [
+          {
+            "category": "method",
+            "value": "scintillation analysis",
+            "origins": ["query", "interpreted"],
+            "matchedTerms": ["scintillation", "scintillation analysis"]
+          },
+          {
+            "category": "instrument",
+            "value": "MeerKAT",
+            "origins": ["query"],
+            "matchedTerms": ["MeerKAT"]
+          }
+        ]
       }
     }
   ]
