@@ -2,7 +2,7 @@
 
 A focused institutional expertise directory that helps users answer one question: **Who should I talk to?**
 
-The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary, re-ranks server-retrieved candidates for the specific query, and generates evidence-grounded match explanations; deterministic lexical search remains available whenever AI is unavailable.
+The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary, re-ranks server-retrieved candidates for the specific query, and generates evidence-grounded match explanations and professional outreach questions; deterministic lexical search remains available whenever AI is unavailable.
 
 ## Run locally
 
@@ -48,6 +48,7 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Search across names, roles, biographies, research areas, methods, instruments, software, keywords, and low-weight recent-publication titles
 - Candidate-constrained Puter re-ranking using curated expertise as primary evidence and recent publications as supporting evidence
 - A query-specific `Suggested first contact` marker after successful AI re-ranking, with deterministic ordering and reasons as the fallback
+- Copyable, professional `Suggested question to ask` guidance on the final top three AI-ranked results
 - Twenty searches per IP per minute on the SQLite search endpoint
 - Persistent Search, People, and Network navigation
 - Alphabetical directory of every stored researcher

@@ -104,6 +104,7 @@ Each result must include at minimum:
 - title or role;
 - relevant research areas or expertise;
 - concise relevance explanation when available;
+- a concise, query-specific `Suggested question to ask` on each of the final top three AI-ranked results when available;
 - a collapsed `View matching evidence` disclosure containing only evidence that contributed to retrieval or ranking;
 - a `Suggested first contact` badge on the first result after a valid AI re-ranking response.
 
@@ -112,6 +113,8 @@ Each result must include at minimum:
 - Every displayed result corresponds to a valid database record.
 - No AI-generated researcher identity can be rendered.
 - AI ordering may change card order while reasons remain attached to the correct researcher.
+- Suggested questions remain attached to the correct researcher and appear only on the final top three results after exact-name precedence is applied.
+- Suggested questions can be copied with pointer or keyboard interaction, with accessible success and failure feedback.
 - Results remain usable when explanation generation is unavailable.
 - Literal-query matches and interpreted-term-only matches are labelled separately without duplicating evidence.
 - The disclosure supports pointer and keyboard interaction through native disclosure semantics.
@@ -126,6 +129,7 @@ Puter must return structured JSON containing:
 
 - an ordered `recommendations` array containing each supplied candidate once;
 - researcher ID and concise relevance reason for every recommendation;
+- a concise professional `suggestedQuestion` grounded in the original query and that candidate's traced matching evidence;
 - interpreted query topics are produced by the separate pre-retrieval interpretation call and remain in browser state.
 
 ### Acceptance tests
@@ -134,6 +138,8 @@ Puter must return structured JSON containing:
 - Returned IDs and ordering are validated before display; unknown and duplicate IDs are discarded.
 - Candidates omitted by the model are appended in their original server order with deterministic reasons.
 - Explanations must be based only on the traced stored evidence that contributed to retrieval or ranking.
+- Suggested questions omit details absent from the query instead of inventing the user's project, observations, or the researcher's work.
+- An invalid or missing suggested question does not invalidate an otherwise valid ranking or relevance reason.
 - Matched mock publication titles, dates, types, and data-source labels may be supplied as candidate-bound supporting evidence.
 - Invalid model output is handled without crashing the search flow.
 
@@ -457,6 +463,8 @@ If evidence is weak, the explanation should indicate uncertainty.
 
 Each relevance explanation should normally be one or two sentences.
 
+Each suggested question should also be one or two sentences and no more than 300 characters.
+
 The application must not create long conversational responses.
 
 ---
@@ -479,6 +487,8 @@ Preferred language:
 - may be useful to approach;
 - relevant experience;
 - also relevant.
+
+For the final top three AI-ranked results, use `Suggested question to ask` for a professional first-person approach based on the original query and candidate-specific matching evidence. Provide a copy control, but do not add messaging, email, or scheduling behavior.
 
 ---
 
@@ -516,6 +526,7 @@ Prioritise:
 2. role/title;
 3. relevant expertise;
 4. why they may be relevant.
+5. a suggested question to ask, when available for an eligible result.
 
 ---
 
@@ -588,8 +599,9 @@ The repository should test:
 12. search results contain only database researchers;
 13. evidence payloads and the 20-per-minute IP rate limit;
 14. browser interpretation, topic, notice, and explanation rendering;
-15. deterministic graph scoring, generic-term suppression, and edge deduplication;
-16. network search, inspection, controls, and renderer-failure fallback.
+15. suggested-question grounding, top-three placement, copying, and graceful omission;
+16. deterministic graph scoring, generic-term suppression, and edge deduplication;
+17. network search, inspection, controls, and renderer-failure fallback.
 
 ---
 
@@ -610,11 +622,12 @@ and demonstrate:
 3. natural-language controlled query expansion;
 4. ranked researcher results;
 5. short grounded AI explanations;
-6. graceful raw-lexical and deterministic-reason fallback when Puter fails;
-7. an alphabetical directory containing every researcher;
-8. stable profile links from both the directory and search results;
-9. a complete stored-data profile for every researcher;
-10. an interactive Network tab with explainable shared-expertise links;
-11. accessible name-based navigation when the graph canvas is unavailable.
+6. grounded suggested questions with copy controls on the top three AI-ranked results;
+7. graceful raw-lexical and deterministic-reason fallback when Puter fails;
+8. an alphabetical directory containing every researcher;
+9. stable profile links from both the directory and search results;
+10. a complete stored-data profile for every researcher;
+11. an interactive Network tab with explainable shared-expertise links;
+12. accessible name-based navigation when the graph canvas is unavailable.
 
 The MVP is not complete if additional product features have displaced effort from this core flow.

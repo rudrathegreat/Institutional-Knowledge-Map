@@ -325,7 +325,7 @@ SQLite deterministic ranking
   ↓
 top candidate researchers
   ↓
-Puter grounded candidate re-ranking and explanations (optional)
+Puter grounded candidate re-ranking, explanations, and outreach questions (optional)
   ↓
 validated query-specific contact order
 ```
@@ -338,9 +338,9 @@ The explanation call receives only:
 - the stored values and profile excerpts that contributed to deterministic retrieval or ranking;
 - metadata for publication titles that contributed to publication scoring.
 
-Each traced match records its field category, literal-query or interpreted-term provenance, matched term, and stored value. Biography evidence is reduced to matched stored sentences. Duplicate raw and interpreted matches are merged, while the UI displays interpreted-only evidence separately. The re-ranking prompt treats curated profile matches as primary evidence. It may use matched publication titles and dates only as fictional ORCID-style supporting evidence of recent topical relevance or to distinguish close candidates, and it prevents claims beyond the supplied titles.
+Each traced match records its field category, literal-query or interpreted-term provenance, matched term, and stored value. Biography evidence is reduced to matched stored sentences. Duplicate raw and interpreted matches are merged, while the UI displays interpreted-only evidence separately. The re-ranking prompt treats curated profile matches as primary evidence. It may use matched publication titles and dates only as fictional ORCID-style supporting evidence of recent topical relevance or to distinguish close candidates, and it prevents claims beyond the supplied titles. The same call drafts a first-person professional outreach question for each candidate. Project and problem details come only from the original query, researcher-specific language comes only from that candidate's matching evidence, and missing context is omitted rather than invented.
 
-Puter must return every supplied candidate in its preferred order. Browser validation discards unknown and duplicate IDs, appends omitted candidates in their original deterministic order, and keeps the original reason for every appended candidate. If the raw query exactly matches a researcher name, that person is moved back to first position after validation.
+Puter must return every supplied candidate in its preferred order. Browser validation discards unknown and duplicate IDs, appends omitted candidates in their original deterministic order, and keeps the original reason for every appended candidate. If the raw query exactly matches a researcher name, that person is moved back to first position after validation. Suggested questions remain candidate-bound and are exposed only on the final top three results. A missing or invalid question is dropped independently without discarding a valid reason or ranking.
 
 ---
 
@@ -368,17 +368,19 @@ The separate explanation response is:
   "recommendations": [
     {
       "researcherId": "researcher_017",
-      "reason": "Their stored profile includes work on pulsars and interstellar scintillation."
+      "reason": "Their stored profile includes work on pulsars and interstellar scintillation.",
+      "suggestedQuestion": "I am investigating changes in pulsar brightness. I noticed your work involves interstellar scintillation - would you be able to point me towards the right approach?"
     },
     {
       "researcherId": "researcher_004",
-      "reason": "Their listed demo publication supports recent relevance to this specific query."
+      "reason": "Their listed demo publication supports recent relevance to this specific query.",
+      "suggestedQuestion": "I am investigating changes in pulsar brightness. I noticed your listed work relates to this topic - would you be able to suggest a useful starting point?"
     }
   ]
 }
 ```
 
-The browser validates this output with Zod before rendering it. A response containing at least one valid candidate produces a complete validated order; the first candidate is marked `Suggested first contact`. This label is query-specific guidance, not a claim that the person is objectively the best or most qualified researcher.
+The browser validates this output with Zod before rendering it. A response containing at least one valid candidate produces a complete validated order; the first candidate is marked `Suggested first contact`, and the final top three candidates may show `Suggested question to ask`. This label is query-specific guidance, not a claim that the person is objectively the best or most qualified researcher. The copy control copies only the question text and keeps it visible if clipboard access fails.
 
 The model cannot introduce new researcher IDs, remove server candidates, or override exact-name precedence.
 
@@ -397,7 +399,7 @@ deterministic lexical retrieval
   ↓
 candidate researchers
   ↓
-display candidates without generated explanation
+display candidates without generated explanation or suggested question
 ```
 
 The core search experience must still work.

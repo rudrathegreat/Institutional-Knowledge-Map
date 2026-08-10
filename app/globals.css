@@ -143,6 +143,7 @@ button:disabled {
 .siteBrand:focus-visible,
 .siteNavLink:focus-visible,
 .resultHeader a:focus-visible,
+.suggestedQuestion button:focus-visible,
 .evidenceDisclosure summary:focus-visible,
 .directoryPersonLink:focus-visible,
 .backLink:focus-visible,
@@ -461,6 +462,69 @@ button:disabled {
   color: var(--secondary-text);
   font-size: 15px;
   line-height: 1.6;
+}
+
+.suggestedQuestion {
+  max-width: 680px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: #f8f8ff;
+  border: 1px solid #ddddf7;
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+}
+
+.suggestedQuestionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.suggestedQuestionHeader h3 {
+  margin: 0;
+  color: var(--primary-text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.suggestedQuestionHeader button {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  color: var(--accent);
+  background: var(--background);
+  border: 1px solid #d3d3ee;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.suggestedQuestionHeader button:hover {
+  color: var(--accent-hover);
+  background: var(--accent-subtle);
+  border-color: #c5c5e8;
+}
+
+.suggestedQuestion blockquote {
+  margin: 10px 0 0;
+  color: #44444f;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.copyStatus {
+  margin: 7px 0 0;
+  color: var(--secondary-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.copyStatus:empty {
+  display: none;
 }
 
 .evidenceDisclosure {

@@ -46,6 +46,7 @@ export interface SearchResultPayload {
   role: string;
   researchAreas: string[];
   reason: string;
+  suggestedQuestion?: string;
   isSuggestedContact?: boolean;
   evidence: SearchEvidencePayload;
 }

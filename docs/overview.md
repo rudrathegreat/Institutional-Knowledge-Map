@@ -95,6 +95,11 @@ Why this person may be relevant
 Their stored profile identifies work on pulsars and interstellar
 scintillation, which overlaps strongly with your question.
 
+Suggested question to ask
+I am investigating changes in pulsar brightness. I noticed your work
+involves interstellar scintillation - would you be able to point me
+towards the right approach?
+
 
 Maya Chen
 Pulsars · Pulsar Timing · Time-Series Analysis
@@ -120,11 +125,12 @@ The MVP contains only the following product features:
 4. Deterministic ranking combining the raw query with validated expanded terms.
 5. Search results containing relevant people.
 6. Short AI-generated explanations of why each returned person may be relevant.
-7. Graceful fallback to non-AI search results when AI explanation generation fails.
-8. An alphabetical directory of all stored researchers.
-9. Detailed person profiles linked from the directory and search results.
-10. An interactive people network derived from shared stored expertise.
-11. Mock researcher data stored in a simple relational database.
+7. Professional, evidence-grounded questions for approaching the final top three AI-ranked people, with copy controls.
+8. Graceful fallback to non-AI search results when AI explanation generation fails.
+9. An alphabetical directory of all stored researchers.
+10. Detailed person profiles linked from the directory and search results.
+11. An interactive people network derived from shared stored expertise.
+12. Mock researcher data stored in a simple relational database.
 
 ---
 

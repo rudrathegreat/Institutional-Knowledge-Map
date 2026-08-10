@@ -170,6 +170,8 @@ describe("SearchExperience", () => {
           ...candidates[1],
           reason:
             "Priya's listed demo publication supports recent relevance to this question.",
+          suggestedQuestion:
+            "I am investigating brief radio signals. I noticed your work involves Bayesian inference - would you be able to point me towards the right approach?",
           isSuggestedContact: true,
         },
         {
@@ -204,6 +206,10 @@ describe("SearchExperience", () => {
     expect(resultCards[0]).toHaveTextContent("Suggested first contact");
     expect(resultCards[0]).toHaveTextContent(
       "Priya's listed demo publication supports recent relevance to this question.",
+    );
+    expect(resultCards[0]).toHaveTextContent("Suggested question to ask");
+    expect(resultCards[0]).toHaveTextContent(
+      "I am investigating brief radio signals.",
     );
     expect(resultCards[1]).toHaveTextContent("Aisha Rahman");
     expect(
@@ -289,6 +295,7 @@ describe("SearchExperience", () => {
     );
     expect(screen.getByText(/AI explanations were unavailable/)).toBeInTheDocument();
     expect(screen.queryByText("Suggested first contact")).not.toBeInTheDocument();
+    expect(screen.queryByText("Suggested question to ask")).not.toBeInTheDocument();
   });
 
   it("renders the documented empty-results guidance", async () => {

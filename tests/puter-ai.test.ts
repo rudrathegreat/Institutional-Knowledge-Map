@@ -6,6 +6,7 @@ import {
   explainCandidates,
   getPuterAiModel,
   interpretQuery,
+  MAX_SUGGESTED_QUESTION_LENGTH,
   mergeExplanationResponse,
   parseInterpretationResponse,
   PUTER_AI_TIMEOUT_MS,
@@ -209,10 +210,18 @@ describe("Puter explanation merging", () => {
       message: {
         content: JSON.stringify({
           recommendations: [
-            { researcherId: "researcher_003", reason: "AI reason for Priya." },
+            {
+              researcherId: "researcher_003",
+              reason: "AI reason for Priya.",
+              suggestedQuestion: "Could you point me towards a Bayesian approach?",
+            },
             { researcherId: "invented-person", reason: "Unsupported." },
             { researcherId: "researcher_003", reason: "Duplicate reason." },
-            { researcherId: "researcher_006", reason: "AI reason for Aisha." },
+            {
+              researcherId: "researcher_006",
+              reason: "AI reason for Aisha.",
+              suggestedQuestion: "Could you point me towards an FRB approach?",
+            },
           ],
         }),
       },
@@ -229,6 +238,10 @@ describe("Puter explanation merging", () => {
     expect(merged.map((candidate) => candidate.isSuggestedContact)).toEqual([
       true,
       undefined,
+    ]);
+    expect(merged.map((candidate) => candidate.suggestedQuestion)).toEqual([
+      "Could you point me towards a Bayesian approach?",
+      "Could you point me towards an FRB approach?",
     ]);
   });
 
@@ -256,8 +269,16 @@ describe("Puter explanation merging", () => {
       message: {
         content: JSON.stringify({
           recommendations: [
-            { researcherId: "researcher_003", reason: "AI reason for Priya." },
-            { researcherId: "researcher_006", reason: "AI reason for Aisha." },
+            {
+              researcherId: "researcher_003",
+              reason: "AI reason for Priya.",
+              suggestedQuestion: "Question for Priya.",
+            },
+            {
+              researcherId: "researcher_006",
+              reason: "AI reason for Aisha.",
+              suggestedQuestion: "Question for Aisha.",
+            },
           ],
         }),
       },
@@ -269,8 +290,79 @@ describe("Puter explanation merging", () => {
     ]);
     expect(merged[0]).toMatchObject({
       reason: "AI reason for Aisha.",
+      suggestedQuestion: "Question for Aisha.",
       isSuggestedContact: true,
     });
+  });
+
+  it("keeps suggestions only on the final top three candidates", () => {
+    const expandedCandidates = [
+      ...candidates,
+      {
+        ...candidates[0],
+        id: "researcher_007",
+        slug: "third-researcher",
+        name: "Third Researcher",
+      },
+      {
+        ...candidates[0],
+        id: "researcher_008",
+        slug: "fourth-researcher",
+        name: "Fourth Researcher",
+      },
+    ];
+    const merged = mergeExplanationResponse(
+      "radio transient",
+      expandedCandidates,
+      {
+        message: {
+          content: JSON.stringify({
+            recommendations: expandedCandidates.map((candidate, index) => ({
+              researcherId: candidate.id,
+              reason: `Reason ${index + 1}.`,
+              suggestedQuestion: `Question ${index + 1}.`,
+            })),
+          }),
+        },
+      },
+    );
+
+    expect(merged.map((candidate) => candidate.suggestedQuestion)).toEqual([
+      "Question 1.",
+      "Question 2.",
+      "Question 3.",
+      undefined,
+    ]);
+  });
+
+  it("drops an invalid suggestion without discarding its valid ranking or reason", () => {
+    const merged = mergeExplanationResponse("radio transient", candidates, {
+      message: {
+        content: JSON.stringify({
+          recommendations: [
+            {
+              researcherId: "researcher_006",
+              reason: "Valid Aisha reason.",
+              suggestedQuestion: "x".repeat(
+                MAX_SUGGESTED_QUESTION_LENGTH + 1,
+              ),
+            },
+            {
+              researcherId: "researcher_003",
+              reason: "Valid Priya reason.",
+              suggestedQuestion: "Valid question for Priya.",
+            },
+          ],
+        }),
+      },
+    });
+
+    expect(merged[0]).toMatchObject({
+      id: "researcher_006",
+      reason: "Valid Aisha reason.",
+      suggestedQuestion: undefined,
+    });
+    expect(merged[1]?.suggestedQuestion).toBe("Valid question for Priya.");
   });
 
   it("keeps deterministic ranking when no valid candidate is returned", () => {
@@ -323,6 +415,8 @@ describe("Puter explanation merging", () => {
     expect(userPayload.candidates[0]).not.toHaveProperty("publications");
     expect(messages[0]?.content).toContain("listed demo publication");
     expect(messages[0]?.content).toContain("exact stored evidence");
+    expect(messages[0]?.content).toContain("suggestedQuestion");
+    expect(messages[0]?.content).toContain("omit unavailable details");
     expect(client.chat.mock.calls[0]?.[1]).toMatchObject({
       model: DEFAULT_PUTER_AI_MODEL,
       temperature: 0,

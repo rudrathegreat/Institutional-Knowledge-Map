@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import type {
   SearchEvidenceCategory,
@@ -9,6 +12,11 @@ import type {
 interface SearchResultProps {
   result: SearchResultPayload;
 }
+
+type CopyFeedback = {
+  question: string;
+  status: "copied" | "error";
+};
 
 const CATEGORY_LABELS: Record<SearchEvidenceCategory, string> = {
   name: "Name",
@@ -139,6 +147,7 @@ function EvidenceGroup({
 }
 
 export function SearchResult({ result }: SearchResultProps) {
+  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const matches = result.evidence.matches ?? [];
   const queryMatches = matches.filter((match) =>
     match.origins.includes("query"),
@@ -148,6 +157,33 @@ export function SearchResult({ result }: SearchResultProps) {
       match.origins.includes("interpreted") &&
       !match.origins.includes("query"),
   );
+  const currentCopyStatus =
+    copyFeedback && copyFeedback.question === result.suggestedQuestion
+      ? copyFeedback.status
+      : null;
+
+  async function copySuggestedQuestion() {
+    if (!result.suggestedQuestion) {
+      return;
+    }
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard access is unavailable.");
+      }
+
+      await navigator.clipboard.writeText(result.suggestedQuestion);
+      setCopyFeedback({
+        question: result.suggestedQuestion,
+        status: "copied",
+      });
+    } catch {
+      setCopyFeedback({
+        question: result.suggestedQuestion,
+        status: "error",
+      });
+    }
+  }
 
   return (
     <article className="searchResult">
@@ -173,6 +209,31 @@ export function SearchResult({ result }: SearchResultProps) {
         <h3>Why this person may be relevant</h3>
         <p>{result.reason}</p>
       </div>
+
+      {result.suggestedQuestion && (
+        <section className="suggestedQuestion">
+          <div className="suggestedQuestionHeader">
+            <h3>Suggested question to ask</h3>
+            <button
+              type="button"
+              onClick={copySuggestedQuestion}
+              aria-label={
+                currentCopyStatus === "copied"
+                  ? "Suggested question copied"
+                  : "Copy suggested question"
+              }
+            >
+              {currentCopyStatus === "copied" ? "Copied" : "Copy question"}
+            </button>
+          </div>
+          <blockquote>{result.suggestedQuestion}</blockquote>
+          <p className="copyStatus" role="status" aria-live="polite">
+            {currentCopyStatus === "copied" && "Suggested question copied."}
+            {currentCopyStatus === "error" &&
+              "Could not copy the question. Select the text to copy it manually."}
+          </p>
+        </section>
+      )}
 
       {matches.length > 0 && (
         <details className="evidenceDisclosure">
