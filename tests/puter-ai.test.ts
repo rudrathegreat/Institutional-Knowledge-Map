@@ -116,7 +116,7 @@ describe("Puter query interpretation", () => {
       {
         message: {
           content: `\`\`\`json
-{"interpretation":"Finding people who study brief radio signals.","interpretedTopics":["Radio transients","radio transients"],"searchTerms":["fast radio bursts","FAST RADIO BURSTS","invented term","ASKAP"]}
+{"kind":"ready","interpretation":"Finding people who study brief radio signals.","interpretedTopics":["Radio transients","radio transients"],"searchTerms":["fast radio bursts","FAST RADIO BURSTS","invented term","ASKAP"]}
 \`\`\``,
         },
       },
@@ -124,10 +124,144 @@ describe("Puter query interpretation", () => {
     );
 
     expect(result).toEqual({
+      kind: "ready",
       interpretation: "Finding people who study brief radio signals.",
       interpretedTopics: ["Radio transients"],
       searchTerms: ["fast radio bursts", "ASKAP"],
     });
+  });
+
+  it("accepts two or three distinct, vocabulary-grounded refinement options", () => {
+    const result = parseInterpretationResponse(
+      {
+        message: {
+          content: JSON.stringify({
+            kind: "refinement",
+            question: "Which aspect are you mainly investigating?",
+            options: [
+              {
+                label: "Radio-source physics",
+                refinedQuery: "Investigating the astrophysics of a brief radio signal",
+                interpretation: "Finding expertise in brief radio-source physics.",
+                interpretedTopics: ["Radio transients", "radio transients"],
+                searchTerms: ["fast radio bursts", "invented term"],
+              },
+              {
+                label: "Instrument response",
+                refinedQuery: "Investigating whether ASKAP affected a brief radio signal",
+                interpretation: "Finding expertise in ASKAP instrument response.",
+                interpretedTopics: ["Instrument calibration"],
+                searchTerms: ["ASKAP"],
+              },
+              {
+                label: "Statistical analysis",
+                refinedQuery: "Analysing a brief radio signal with Bayesian methods",
+                interpretation: "Finding expertise in statistical signal analysis.",
+                interpretedTopics: ["Bayesian analysis"],
+                searchTerms: ["Bayesian inference", "dedispersion"],
+              },
+            ],
+          }),
+        },
+      },
+      vocabulary,
+    );
+
+    expect(result).toEqual({
+      kind: "refinement",
+      question: "Which aspect are you mainly investigating?",
+      options: [
+        {
+          label: "Radio-source physics",
+          refinedQuery: "Investigating the astrophysics of a brief radio signal",
+          interpretation: "Finding expertise in brief radio-source physics.",
+          interpretedTopics: ["Radio transients"],
+          searchTerms: ["fast radio bursts"],
+        },
+        {
+          label: "Instrument response",
+          refinedQuery: "Investigating whether ASKAP affected a brief radio signal",
+          interpretation: "Finding expertise in ASKAP instrument response.",
+          interpretedTopics: ["Instrument calibration"],
+          searchTerms: ["ASKAP"],
+        },
+        {
+          label: "Statistical analysis",
+          refinedQuery: "Analysing a brief radio signal with Bayesian methods",
+          interpretation: "Finding expertise in statistical signal analysis.",
+          interpretedTopics: ["Bayesian analysis"],
+          searchTerms: ["Bayesian inference", "dedispersion"],
+        },
+      ],
+    });
+  });
+
+  it.each([
+    [
+      "fewer than two options",
+      [
+        {
+          label: "Only choice",
+          refinedQuery: "Only refined query",
+          interpretation: "Only interpretation.",
+          interpretedTopics: [],
+          searchTerms: ["ASKAP"],
+        },
+      ],
+    ],
+    [
+      "an option without a known vocabulary term",
+      [
+        {
+          label: "Known choice",
+          refinedQuery: "Known refined query",
+          interpretation: "Known interpretation.",
+          interpretedTopics: [],
+          searchTerms: ["ASKAP"],
+        },
+        {
+          label: "Unknown choice",
+          refinedQuery: "Unknown refined query",
+          interpretation: "Unknown interpretation.",
+          interpretedTopics: [],
+          searchTerms: ["invented term"],
+        },
+      ],
+    ],
+    [
+      "duplicate controlled term sets",
+      [
+        {
+          label: "First choice",
+          refinedQuery: "First refined query",
+          interpretation: "First interpretation.",
+          interpretedTopics: [],
+          searchTerms: ["ASKAP"],
+        },
+        {
+          label: "Second choice",
+          refinedQuery: "Second refined query",
+          interpretation: "Second interpretation.",
+          interpretedTopics: [],
+          searchTerms: ["askap"],
+        },
+      ],
+    ],
+  ])("rejects refinement output with %s", (_reason, options) => {
+    expect(() =>
+      parseInterpretationResponse(
+        {
+          message: {
+            content: JSON.stringify({
+              kind: "refinement",
+              question: "Which meaning?",
+              options,
+            }),
+          },
+        },
+        vocabulary,
+      ),
+    ).toThrow();
   });
 
   it.each([
@@ -150,6 +284,7 @@ describe("Puter query interpretation", () => {
       chat: vi.fn().mockResolvedValue({
         message: {
           content: JSON.stringify({
+            kind: "ready",
             interpretation: "Finding transient-radio expertise.",
             interpretedTopics: ["Radio transients"],
             searchTerms: ["fast radio bursts"],
@@ -168,6 +303,13 @@ describe("Puter query interpretation", () => {
         temperature: 0,
       }),
     );
+    const messages = client.chat.mock.calls[0]?.[0] as Array<{
+      role: string;
+      content: string;
+    }>;
+    expect(messages[0]?.content).toContain('"kind":"refinement"');
+    expect(messages[0]?.content).toContain("exactly 2 or 3 mutually exclusive options");
+    expect(messages[0]?.content).toContain("Do not refine exact person names");
   });
 
   it("rejects an OpenAI-prefixed configuration without calling Puter", async () => {

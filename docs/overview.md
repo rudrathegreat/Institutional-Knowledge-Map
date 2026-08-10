@@ -122,15 +122,16 @@ The MVP contains only the following product features:
 1. One unified search bar.
 2. Traditional lexical search.
 3. Puter-assisted interpretation into a controlled expertise vocabulary.
-4. Deterministic ranking combining the raw query with validated expanded terms.
-5. Search results containing relevant people.
-6. Short AI-generated explanations of why each returned person may be relevant.
-7. Professional, evidence-grounded questions for approaching the final top three AI-ranked people, with copy controls.
-8. Graceful fallback to non-AI search results when AI explanation generation fails.
-9. An alphabetical directory of all stored researchers.
-10. Detailed person profiles linked from the directory and search results.
-11. An interactive people network derived from shared stored expertise.
-12. Mock researcher data stored in a simple relational database.
+4. One lightweight search-refinement prompt for queries with materially different meanings.
+5. Deterministic ranking combining the raw query with validated expanded terms.
+6. Search results containing relevant people.
+7. Short AI-generated explanations of why each returned person may be relevant.
+8. Professional, evidence-grounded questions for approaching the final top three AI-ranked people, with copy controls.
+9. Graceful fallback to non-AI search results when AI explanation generation fails.
+10. An alphabetical directory of all stored researchers.
+11. Detailed person profiles linked from the directory and search results.
+12. An interactive people network derived from shared stored expertise.
+13. Mock researcher data stored in a simple relational database.
 
 ---
 
@@ -173,6 +174,8 @@ analysis I should be looking at.
 
 Ask Puter to select related terms from the directory vocabulary, then let the server validate and rank those terms deterministically.
 
+If the query has two or three materially different, vocabulary-supported meanings, pause retrieval and show one concise refinement question. Selecting an option replaces the search text with a self-contained refined query for the user to review and submit. Do not create a conversation or ask a second follow-up.
+
 ---
 
 ## 8. AI Responsibilities
@@ -182,6 +185,7 @@ The AI layer is deliberately narrow.
 Puter AI may:
 
 - interpret a complex natural-language query;
+- identify genuine ambiguity and propose two or three controlled search refinements;
 - explain why retrieved people are relevant.
 
 Puter AI must not:

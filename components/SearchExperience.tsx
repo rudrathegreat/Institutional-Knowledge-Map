@@ -9,6 +9,10 @@ import type {
   SearchResultPayload,
 } from "@/lib/api-types";
 import { explainCandidates, interpretQuery } from "@/lib/puter-ai";
+import type {
+  SearchRefinement,
+  SearchRefinementOption,
+} from "@/lib/puter-ai";
 
 const MAX_QUERY_LENGTH = 2_000;
 const INTERPRETATION_UNAVAILABLE_NOTICE =
@@ -16,7 +20,13 @@ const INTERPRETATION_UNAVAILABLE_NOTICE =
 const EXPLANATION_UNAVAILABLE_NOTICE =
   "AI explanations were unavailable, so the match reasons use directory evidence.";
 
-type SearchState = "idle" | "loading" | "results" | "empty" | "error";
+type SearchState =
+  | "idle"
+  | "loading"
+  | "refinement"
+  | "results"
+  | "empty"
+  | "error";
 
 interface SearchExperienceProps {
   expertiseVocabulary?: string[];
@@ -32,19 +42,58 @@ export function SearchExperience({
   const [interpretation, setInterpretation] = useState("");
   const [interpretedTopics, setInterpretedTopics] = useState<string[]>([]);
   const [aiNotice, setAiNotice] = useState("");
+  const [refinement, setRefinement] = useState<SearchRefinement | null>(null);
+  const [pendingRefinement, setPendingRefinement] =
+    useState<SearchRefinementOption | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
 
   const hasSearched = searchState !== "idle";
+
+  function handleQueryChange(nextQuery: string) {
+    setQuery(nextQuery);
+
+    if (searchState === "refinement") {
+      setRefinement(null);
+      setPendingRefinement(null);
+      setMessage("");
+      setAiNotice("");
+      setSearchState("idle");
+      return;
+    }
+
+    if (
+      pendingRefinement &&
+      nextQuery.trim() !== pendingRefinement.refinedQuery.trim()
+    ) {
+      setPendingRefinement(null);
+    }
+  }
+
+  function selectRefinement(option: SearchRefinementOption) {
+    setQuery(option.refinedQuery);
+    setPendingRefinement(option);
+    setMessage("");
+    setAiNotice("");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     activeRequest.current?.abort();
 
     const trimmedQuery = query.trim();
+    const selectedRefinement =
+      pendingRefinement?.refinedQuery.trim() === trimmedQuery
+        ? pendingRefinement
+        : null;
 
     setInterpretation("");
     setInterpretedTopics([]);
     setAiNotice("");
+    setRefinement(null);
+
+    if (!selectedRefinement) {
+      setPendingRefinement(null);
+    }
 
     if (!trimmedQuery) {
       setResults([]);
@@ -70,26 +119,40 @@ export function SearchExperience({
       let interpretedTerms: string[] = [];
       let aiInterpretationAvailable = false;
 
-      try {
-        const interpretedQuery = await interpretQuery(
-          trimmedQuery,
-          expertiseVocabulary,
-        );
-
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        interpretedTerms = interpretedQuery.searchTerms;
+      if (selectedRefinement) {
+        interpretedTerms = selectedRefinement.searchTerms;
         aiInterpretationAvailable = true;
-        setInterpretation(interpretedQuery.interpretation);
-        setInterpretedTopics(interpretedQuery.interpretedTopics);
-      } catch {
-        if (controller.signal.aborted) {
-          return;
-        }
+        setInterpretation(selectedRefinement.interpretation);
+        setInterpretedTopics(selectedRefinement.interpretedTopics);
+      } else {
+        try {
+          const interpretedQuery = await interpretQuery(
+            trimmedQuery,
+            expertiseVocabulary,
+          );
 
-        setAiNotice(INTERPRETATION_UNAVAILABLE_NOTICE);
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          if (interpretedQuery.kind === "refinement") {
+            setResults([]);
+            setRefinement(interpretedQuery);
+            setSearchState("refinement");
+            return;
+          }
+
+          interpretedTerms = interpretedQuery.searchTerms;
+          aiInterpretationAvailable = true;
+          setInterpretation(interpretedQuery.interpretation);
+          setInterpretedTopics(interpretedQuery.interpretedTopics);
+        } catch {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          setAiNotice(INTERPRETATION_UNAVAILABLE_NOTICE);
+        }
       }
 
       const response = await fetch("/api/search", {
@@ -168,10 +231,16 @@ export function SearchExperience({
               name="query"
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => handleQueryChange(event.target.value)}
               placeholder="Search a person, topic, method, or ask a question…"
               autoComplete="off"
-              aria-describedby={message ? "search-message" : undefined}
+              aria-describedby={
+                message
+                  ? "search-message"
+                  : searchState === "refinement"
+                    ? "search-refinement-hint"
+                    : undefined
+              }
               aria-invalid={searchState === "error"}
               maxLength={MAX_QUERY_LENGTH + 1}
             />
@@ -203,6 +272,42 @@ export function SearchExperience({
 
           {searchState === "error" && message}
         </div>
+
+        {searchState === "refinement" && refinement && (
+          <section
+            className="searchRefinement"
+            aria-labelledby="search-refinement-question"
+          >
+            <p className="searchRefinementLabel">Refine your search</p>
+            <h2 id="search-refinement-question">{refinement.question}</h2>
+            <div className="searchRefinementOptions">
+              {refinement.options.map((option) => {
+                const isSelected = pendingRefinement === option;
+
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    className="searchRefinementOption"
+                    aria-pressed={isSelected}
+                    onClick={() => selectRefinement(option)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p
+              id="search-refinement-hint"
+              className="searchRefinementHint"
+              aria-live="polite"
+            >
+              {pendingRefinement
+                ? "The search above has been updated. Press Search to continue."
+                : "Choose the closest meaning to update your search."}
+            </p>
+          </section>
+        )}
 
         {interpretation && searchState !== "error" && (
           <section className="searchInterpretation" aria-label="AI interpretation">

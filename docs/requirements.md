@@ -68,11 +68,16 @@ The browser may ask Puter to interpret an ordinary-language query into terms sel
 
 The vocabulary must be derived from stored titles, roles, research areas, methods, instruments, software, and keywords. Proposed terms must be validated in both browser and server trust boundaries.
 
+When a query has two or three materially different meanings that would change which people are relevant, Puter may return one concise refinement question before retrieval. Each option must provide distinct validated vocabulary terms and a self-contained refined query. Selecting an option updates the primary search input; the user must explicitly submit it. Clear searches must not be interrupted, and a refined submission must not trigger another follow-up unless the user edits it.
+
 ### Acceptance tests
 
 - A natural-language query with limited exact keyword overlap can still retrieve a relevant researcher through controlled expansion.
 - Unknown and duplicate terms are discarded.
 - Malformed or non-JSON Puter output is not submitted as interpreted terms.
+- Ambiguous queries pause retrieval and show two or three distinct, vocabulary-grounded options.
+- Selecting an option updates the query without retrieving results until Search is submitted.
+- Editing a generated refinement clears it and restarts normal interpretation.
 - Search continues with the raw query when Puter is unavailable.
 
 ---
@@ -211,6 +216,7 @@ Search must degrade gracefully.
 
 - If the explanation model fails, retrieved people are still shown.
 - If Puter query interpretation fails, raw lexical search is attempted.
+- If Puter returns malformed or ungrounded refinement options, raw lexical search is attempted.
 - If Puter explanation generation fails, deterministic reasons remain visible.
 - Cancelling Puter authentication, exhausting allowance, or selecting an unavailable model does not crash search.
 - AI provider failure does not crash the application.

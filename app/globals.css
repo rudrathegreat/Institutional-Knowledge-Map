@@ -142,6 +142,7 @@ button:disabled {
 
 .siteBrand:focus-visible,
 .siteNavLink:focus-visible,
+.searchRefinementOption:focus-visible,
 .resultHeader a:focus-visible,
 .suggestedQuestion button:focus-visible,
 .evidenceDisclosure summary:focus-visible,
@@ -298,6 +299,66 @@ button:disabled {
 
 .searchStatus[role="alert"] {
   color: #a13b36;
+}
+
+.searchRefinement {
+  margin-top: 4px;
+  padding: 18px;
+  background: var(--subtle-background);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+.searchRefinementLabel {
+  margin: 0 0 6px;
+  color: var(--accent-hover);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.searchRefinement h2 {
+  margin: 0;
+  color: var(--primary-text);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.searchRefinementOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.searchRefinementOption {
+  min-height: 39px;
+  padding: 8px 13px;
+  color: #464650;
+  background: var(--background);
+  border: 1px solid #d7d7d3;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.searchRefinementOption:hover,
+.searchRefinementOption[aria-pressed="true"] {
+  color: var(--accent-hover);
+  background: var(--accent-subtle);
+  border-color: #c9c9f2;
+}
+
+.searchRefinementHint {
+  margin: 12px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .searchInterpretation {
@@ -1405,6 +1466,14 @@ button:disabled {
   .searchExamples {
     padding: 0 12px;
     line-height: 1.7;
+  }
+
+  .searchRefinementOptions {
+    flex-direction: column;
+  }
+
+  .searchRefinementOption {
+    width: 100%;
   }
 
   .results {

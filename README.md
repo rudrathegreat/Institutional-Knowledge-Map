@@ -2,7 +2,7 @@
 
 A focused institutional expertise directory that helps users answer one question: **Who should I talk to?**
 
-The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary, re-ranks server-retrieved candidates for the specific query, and generates evidence-grounded match explanations and professional outreach questions; deterministic lexical search remains available whenever AI is unavailable.
+The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary, offers one lightweight search-refinement prompt when a query has materially different meanings, re-ranks server-retrieved candidates for the specific query, and generates evidence-grounded match explanations and professional outreach questions; deterministic lexical search remains available whenever AI is unavailable.
 
 ## Run locally
 

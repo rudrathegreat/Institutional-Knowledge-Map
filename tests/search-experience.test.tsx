@@ -160,6 +160,7 @@ describe("SearchExperience", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "ready",
       interpretation: "Finding specialists in brief radio signals.",
       interpretedTopics: ["Radio transients", "Signal detection"],
       searchTerms: ["fast radio bursts", "dedispersion"],
@@ -221,9 +222,167 @@ describe("SearchExperience", () => {
     });
   });
 
+  it("pauses an ambiguous search until a refinement is selected and submitted", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        interpretedTopics: [],
+        results: [
+          {
+            id: "researcher_020",
+            slug: "jordan-lee",
+            name: "Jordan Lee",
+            title: "Instrument Scientist",
+            role: "Radio Instrumentation Researcher",
+            researchAreas: ["radio instrumentation"],
+            reason: "Their stored profile includes instrument calibration.",
+            evidence: {
+              biography: "Jordan studies radio instrumentation.",
+              methods: ["instrument calibration"],
+              instruments: ["ASKAP"],
+              software: [],
+              keywords: ["calibration"],
+              publications: [],
+              matches: [],
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "refinement",
+      question: "Are you mainly asking about the source or the instrument?",
+      options: [
+        {
+          label: "Source astrophysics",
+          refinedQuery: "What astrophysical process changed my pulsar brightness?",
+          interpretation: "Finding expertise in astrophysical brightness changes.",
+          interpretedTopics: ["Pulsar astrophysics"],
+          searchTerms: ["pulsars"],
+        },
+        {
+          label: "Instrument calibration",
+          refinedQuery: "Could instrument calibration have changed my pulsar brightness?",
+          interpretation: "Finding expertise in instrumental brightness changes.",
+          interpretedTopics: ["Instrument calibration"],
+          searchTerms: ["instrument calibration", "ASKAP"],
+        },
+      ],
+    });
+
+    render(
+      <SearchExperience
+        expertiseVocabulary={["pulsars", "instrument calibration", "ASKAP"]}
+      />,
+    );
+    const input = screen.getByLabelText("Search for expertise");
+    await user.type(input, "Why did my pulsar brightness change?{enter}");
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Are you mainly asking about the source or the instrument?",
+      }),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Source astrophysics" }));
+    expect(input).toHaveValue(
+      "What astrophysical process changed my pulsar brightness?",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Instrument calibration" }),
+    );
+    expect(input).toHaveValue(
+      "Could instrument calibration have changed my pulsar brightness?",
+    );
+    expect(
+      screen.getByRole("button", { name: "Instrument calibration" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(await screen.findByText("Jordan Lee")).toBeInTheDocument();
+    expect(puterAiMocks.interpretQuery).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      query: "Could instrument calibration have changed my pulsar brightness?",
+      interpretedTerms: ["instrument calibration", "ASKAP"],
+    });
+    expect(puterAiMocks.explainCandidates).toHaveBeenCalledWith(
+      "Could instrument calibration have changed my pulsar brightness?",
+      expect.any(Array),
+    );
+    expect(
+      screen.getByText("Finding expertise in instrumental brightness changes."),
+    ).toBeInTheDocument();
+  });
+
+  it("clears a pending refinement when the generated query is manually edited", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ interpretedTopics: [], results: [] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    puterAiMocks.interpretQuery
+      .mockResolvedValueOnce({
+        kind: "refinement",
+        question: "Which part of the problem matters most?",
+        options: [
+          {
+            label: "Astrophysics",
+            refinedQuery: "Astrophysical pulsar brightness changes",
+            interpretation: "Finding pulsar astrophysics expertise.",
+            interpretedTopics: ["Pulsars"],
+            searchTerms: ["pulsars"],
+          },
+          {
+            label: "Calibration",
+            refinedQuery: "Instrument calibration for pulsar observations",
+            interpretation: "Finding calibration expertise.",
+            interpretedTopics: ["Calibration"],
+            searchTerms: ["instrument calibration"],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        kind: "ready",
+        interpretation: "Finding ASKAP expertise.",
+        interpretedTopics: ["ASKAP"],
+        searchTerms: ["ASKAP"],
+      });
+
+    render(
+      <SearchExperience
+        expertiseVocabulary={["pulsars", "instrument calibration", "ASKAP"]}
+      />,
+    );
+    const input = screen.getByLabelText("Search for expertise");
+    await user.type(input, "brightness changed{enter}");
+    await screen.findByRole("heading", {
+      name: "Which part of the problem matters most?",
+    });
+    await user.click(screen.getByRole("button", { name: "Calibration" }));
+
+    await user.clear(input);
+    await user.type(input, "ASKAP signal issue{enter}");
+
+    expect(
+      await screen.findByRole("heading", { name: "No strong matches found." }),
+    ).toBeInTheDocument();
+    expect(puterAiMocks.interpretQuery).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      query: "ASKAP signal issue",
+      interpretedTerms: ["ASKAP"],
+    });
+  });
+
   it("keeps deterministic reasons when the explanation call fails", async () => {
     const user = userEvent.setup();
     puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "ready",
       interpretation: "Finding pulsar specialists.",
       interpretedTopics: ["Pulsars"],
       searchTerms: ["pulsars"],

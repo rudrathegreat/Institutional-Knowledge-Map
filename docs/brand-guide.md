@@ -47,7 +47,13 @@ The primary search experience uses this state flow:
 Initial search state
         ↓
 Searching state
-        ↓
+        ├── clear query ──→ Results state
+        └── ambiguous query ──→ Search refinement
+                                     ↓
+                              Updated search input
+                                     ↓
+                               Searching state
+                                     ↓
 Results state
         ↓
 New search
@@ -277,6 +283,12 @@ Do not use:
 - streaming conversational prose;
 - bouncing AI dots styled as a chat reply;
 - avatars.
+
+## 12a. Search Refinement State
+
+When a query has materially different meanings, show one compact panel beneath the search bar before results. Use a short neutral question and two or three restrained choice buttons.
+
+Selecting a choice replaces the text in the existing search input. Keep the choices visible so the user can switch, and require the existing Search action to continue. Do not add message bubbles, an AI identity, free-form follow-up fields, conversation history, or a separate `Search both` action.
 
 ---
 
