@@ -132,6 +132,7 @@ The MVP contains only the following product features:
 11. Detailed person profiles linked from the directory and search results.
 12. An interactive people network derived from shared stored expertise.
 13. Mock researcher data stored in a simple relational database.
+14. Anonymous `Helpful` / `Not relevant` feedback tied to a recommendation and its search context, without researcher ratings or immediate ranking changes.
 
 ---
 
@@ -292,7 +293,10 @@ The following must not be implemented in the MVP.
 - notifications;
 - researcher ratings;
 - expertise scores;
+- feedback totals or researcher-level feedback aggregates;
 - social features.
+
+Query-specific recommendation feedback is the narrow exception: it records controlled search context for future offline ranking evaluation, never a score or rating on a researcher.
 
 Do not add these for future-proofing.
 

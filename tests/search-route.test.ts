@@ -84,6 +84,12 @@ describe("POST /api/search", () => {
       slug: "maya-chen",
       name: "Maya Chen",
     });
+    expect(payload.results[0].recommendationId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(new Set(payload.results.map((result: { recommendationId: string }) =>
+      result.recommendationId,
+    )).size).toBe(payload.results.length);
     expect(payload.results[0].evidence).toMatchObject({
       biography: expect.stringContaining("long-baseline pulsar timing"),
       methods: expect.arrayContaining(["pulsar timing"]),

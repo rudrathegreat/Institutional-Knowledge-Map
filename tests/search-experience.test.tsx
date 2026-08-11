@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -55,6 +55,7 @@ describe("SearchExperience", () => {
           interpretedTopics: [],
           results: [
             {
+              recommendationId: "10000000-0000-4000-8000-000000000102",
               id: "researcher_002",
               slug: "daniel-brooks",
               name: "Daniel Brooks",
@@ -104,6 +105,7 @@ describe("SearchExperience", () => {
         interpretedTopics: [],
         results: [
           {
+            recommendationId: "10000000-0000-4000-8000-000000000106",
             id: "researcher_006",
             slug: "aisha-rahman",
             name: "Aisha Rahman",
@@ -130,6 +132,7 @@ describe("SearchExperience", () => {
             },
           },
           {
+            recommendationId: "10000000-0000-4000-8000-000000000103",
             id: "researcher_003",
             slug: "priya-nair",
             name: "Priya Nair",
@@ -220,6 +223,20 @@ describe("SearchExperience", () => {
       query: "a brief signal from far away",
       interpretedTerms: ["fast radio bursts", "dedispersion"],
     });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ feedback: "helpful" }),
+    });
+    await user.click(
+      within(resultCards[0]).getByRole("button", { name: "Helpful" }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({
+      recommendationId: "10000000-0000-4000-8000-000000000103",
+      feedback: "helpful",
+      displayedPosition: 1,
+      rankingMode: "ai",
+    });
   });
 
   it("pauses an ambiguous search until a refinement is selected and submitted", async () => {
@@ -230,6 +247,7 @@ describe("SearchExperience", () => {
         interpretedTopics: [],
         results: [
           {
+            recommendationId: "10000000-0000-4000-8000-000000000120",
             id: "researcher_020",
             slug: "jordan-lee",
             name: "Jordan Lee",
@@ -396,6 +414,7 @@ describe("SearchExperience", () => {
           interpretedTopics: [],
           results: [
             {
+              recommendationId: "10000000-0000-4000-8000-000000000101",
               id: "researcher_001",
               slug: "maya-chen",
               name: "Maya Chen",
@@ -413,6 +432,7 @@ describe("SearchExperience", () => {
               },
             },
             {
+              recommendationId: "10000000-0000-4000-8000-000000000202",
               id: "researcher_002",
               slug: "daniel-brooks",
               name: "Daniel Brooks",

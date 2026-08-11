@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import fs from "node:fs";
@@ -164,8 +165,22 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
 
   db.transaction((transaction) => {
     transaction.delete(orcidWorks).run();
-    transaction.delete(researchers).run();
-    transaction.insert(researchers).values(rows).run();
+
+    for (const row of rows) {
+      transaction
+        .insert(researchers)
+        .values(row)
+        .onConflictDoUpdate({
+          target: researchers.id,
+          set: row,
+        })
+        .run();
+    }
+
+    transaction
+      .delete(researchers)
+      .where(notInArray(researchers.id, rows.map(({ id }) => id)))
+      .run();
     transaction.insert(orcidWorks).values(workRows).run();
   });
 

@@ -15,6 +15,7 @@ The system only needs to:
 7. list researchers for directory browsing;
 8. return one researcher profile by stable slug;
 9. derive a sparse, deterministic people network from structured profile fields.
+10. collect anonymous, query-specific recommendation feedback without changing live ranking.
 
 No ingestion system, MCP server, vector database, graph database, agent framework, or separate backend service is required.
 
@@ -151,6 +152,12 @@ embedding_json
 ### `orcid_works`
 
 Mock publications are stored separately so one researcher can have multiple works and a future ORCID adapter can populate the same internal shape. Each row stores its researcher ID, title, work type, publication date, optional external identifier and URL, and data source. The current fixture always uses `mock` and supplies no external links.
+
+### `recommendation_feedback`
+
+Each returned result creates an anonymous recommendation context with opaque recommendation and search-group IDs, the researcher ID, validated interpreted terms, matched stored evidence values and categories, and its deterministic retrieval position. A feedback submission adds the displayed position, ranking mode, `helpful` or `not_relevant` value, and update time to that same row.
+
+Raw queries, IP addresses, browser identifiers, and user identities are never stored. These records are retained for future offline ranking evaluation only; they do not affect live ranking and are not aggregated into researcher ratings. Researcher seeding uses ID-based upserts so feedback survives refreshes for identities that remain in the fixture.
 
 ---
 
@@ -410,7 +417,7 @@ If Puter authentication is cancelled, allowance is exhausted, the configured mod
 
 ## 15. API
 
-Only one application API endpoint is required.
+The application exposes two narrow API endpoints.
 
 ```http
 POST /api/search
@@ -432,6 +439,7 @@ Response:
   "interpretedTopics": [],
   "results": [
     {
+      "recommendationId": "82b24d4d-a407-4212-af90-27bd985e8817",
       "id": "researcher_017",
       "name": "Daniel Brooks",
       "title": "Research Fellow",
@@ -467,7 +475,22 @@ Response:
 }
 ```
 
-No additional JSON API is required. Directory, profile, and Network pages read SQLite directly from server components.
+```http
+POST /api/recommendation-feedback
+```
+
+Input:
+
+```json
+{
+  "recommendationId": "82b24d4d-a407-4212-af90-27bd985e8817",
+  "feedback": "helpful",
+  "displayedPosition": 1,
+  "rankingMode": "ai"
+}
+```
+
+The endpoint validates the opaque recommendation context, updates its answer in place, and returns the saved feedback value. It does not accept a researcher ID, raw query, or user identifier. Directory, profile, and Network pages continue to read SQLite directly from server components.
 
 ---
 

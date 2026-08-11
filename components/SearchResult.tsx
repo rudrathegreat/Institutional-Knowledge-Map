@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type {
+  RecommendationFeedbackResponsePayload,
+  RecommendationFeedbackValue,
+  RecommendationRankingMode,
+  SearchErrorPayload,
   SearchEvidenceCategory,
   SearchEvidenceMatchPayload,
   SearchResultPayload,
@@ -11,6 +15,8 @@ import type {
 
 interface SearchResultProps {
   result: SearchResultPayload;
+  displayedPosition: number;
+  rankingMode: RecommendationRankingMode;
 }
 
 type CopyFeedback = {
@@ -146,8 +152,16 @@ function EvidenceGroup({
   );
 }
 
-export function SearchResult({ result }: SearchResultProps) {
+export function SearchResult({
+  result,
+  displayedPosition,
+  rankingMode,
+}: SearchResultProps) {
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
+  const [recommendationFeedback, setRecommendationFeedback] =
+    useState<RecommendationFeedbackValue | null>(null);
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState("");
   const matches = result.evidence.matches ?? [];
   const queryMatches = matches.filter((match) =>
     match.origins.includes("query"),
@@ -182,6 +196,44 @@ export function SearchResult({ result }: SearchResultProps) {
         question: result.suggestedQuestion,
         status: "error",
       });
+    }
+  }
+
+  async function saveFeedback(feedback: RecommendationFeedbackValue) {
+    if (isSavingFeedback || recommendationFeedback === feedback) {
+      return;
+    }
+
+    setIsSavingFeedback(true);
+    setFeedbackStatus("");
+
+    try {
+      const response = await fetch("/api/recommendation-feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recommendationId: result.recommendationId,
+          feedback,
+          displayedPosition,
+          rankingMode,
+        }),
+      });
+      const payload = (await response.json()) as
+        | RecommendationFeedbackResponsePayload
+        | SearchErrorPayload;
+
+      if (!response.ok || "error" in payload) {
+        throw new Error("Feedback could not be saved.");
+      }
+
+      setRecommendationFeedback(payload.feedback);
+      setFeedbackStatus("Thanks — feedback saved.");
+    } catch {
+      setFeedbackStatus("Could not save feedback. Please try again.");
+    } finally {
+      setIsSavingFeedback(false);
     }
   }
 
@@ -248,6 +300,38 @@ export function SearchResult({ result }: SearchResultProps) {
           </div>
         </details>
       )}
+
+      <section
+        className="recommendationFeedback"
+        aria-label="Recommendation feedback"
+      >
+        <p>Helpful for this search?</p>
+        <div className="recommendationFeedbackControls">
+          <button
+            type="button"
+            aria-pressed={recommendationFeedback === "helpful"}
+            disabled={isSavingFeedback}
+            onClick={() => saveFeedback("helpful")}
+          >
+            Helpful
+          </button>
+          <button
+            type="button"
+            aria-pressed={recommendationFeedback === "not_relevant"}
+            disabled={isSavingFeedback}
+            onClick={() => saveFeedback("not_relevant")}
+          >
+            Not relevant
+          </button>
+        </div>
+        <p
+          className="recommendationFeedbackStatus"
+          role="status"
+          aria-live="polite"
+        >
+          {feedbackStatus}
+        </p>
+      </section>
     </article>
   );
 }

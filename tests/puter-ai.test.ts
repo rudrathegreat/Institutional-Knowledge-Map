@@ -21,6 +21,7 @@ const vocabulary = [
 
 const candidates: SearchResultPayload[] = [
   {
+    recommendationId: "10000000-0000-4000-8000-000000000006",
     id: "researcher_006",
     slug: "aisha-rahman",
     name: "Aisha Rahman",
@@ -70,6 +71,7 @@ const candidates: SearchResultPayload[] = [
     },
   },
   {
+    recommendationId: "10000000-0000-4000-8000-000000000003",
     id: "researcher_003",
     slug: "priya-nair",
     name: "Priya Nair",

@@ -266,6 +266,23 @@ Users must be able to pan, zoom, drag, find a person by name, inspect people and
 
 ---
 
+## FR-014 — Recommendation Feedback
+
+Every search result must offer query-specific `Helpful` and `Not relevant` controls. Feedback applies to the displayed recommendation, not to the researcher, and must not create public totals, profile ratings, or live ranking changes.
+
+The stored context may include validated interpreted terms, matched stored evidence, deterministic and displayed positions, and whether the final ordering was deterministic or AI-assisted. It must not include the raw query, IP address, browser identifier, or user identity.
+
+### Acceptance tests
+
+- Both choices support pointer and keyboard interaction and expose their selected state with `aria-pressed`.
+- A saved answer can be changed without creating a second feedback record for the same recommendation.
+- Save success and failure are announced accessibly, and a failed update preserves the previous answer.
+- Feedback remains independent across result cards and new searches receive new recommendation identifiers.
+- Feedback collection does not change recommendation ordering.
+- Re-seeding preserves feedback for researcher IDs that remain in the fixture.
+
+---
+
 # 3. Performance Requirements
 
 ## PR-001 — Initial Page
@@ -418,7 +435,7 @@ Do not inject unsanitised HTML.
 
 ## SR-008 — Basic Rate Limiting
 
-The SQLite search endpoint must enforce a process-local limit of 20 searches per IP per 60 seconds and return HTTP 429 with `Retry-After` when exceeded.
+The SQLite search endpoint must enforce a process-local limit of 20 searches per IP per 60 seconds. The feedback endpoint must allow up to 60 submissions per IP per 60 seconds so a user can respond to several result sets. Both return HTTP 429 with `Retry-After` when exceeded.
 
 ---
 
@@ -439,7 +456,7 @@ Do not store:
 
 Do not log secrets or API credentials.
 
-Persistent storage of user search queries is not required for the MVP.
+Do not persist raw user search queries. Recommendation feedback stores only validated controlled terms and stored directory evidence as search context.
 
 ---
 
@@ -583,7 +600,7 @@ Do not implement:
 - messaging;
 - email;
 - scheduling;
-- analytics.
+- analytics dashboards or researcher-level feedback aggregates.
 
 ---
 
@@ -608,6 +625,7 @@ The repository should test:
 15. suggested-question grounding, top-three placement, copying, and graceful omission;
 16. deterministic graph scoring, generic-term suppression, and edge deduplication;
 17. network search, inspection, controls, and renderer-failure fallback.
+18. recommendation-context privacy, feedback updates, accessible controls, and feedback rate limiting.
 
 ---
 
@@ -635,5 +653,6 @@ and demonstrate:
 10. a complete stored-data profile for every researcher;
 11. an interactive Network tab with explainable shared-expertise links;
 12. accessible name-based navigation when the graph canvas is unavailable.
+13. anonymous query-specific recommendation feedback without researcher ratings or live ranking changes.
 
 The MVP is not complete if additional product features have displaced effort from this core flow.

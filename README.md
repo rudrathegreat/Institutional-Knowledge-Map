@@ -50,6 +50,8 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - A query-specific `Suggested first contact` marker after successful AI re-ranking, with deterministic ordering and reasons as the fallback
 - Copyable, professional `Suggested question to ask` guidance on the final top three AI-ranked results
 - Twenty searches per IP per minute on the SQLite search endpoint
+- Query-specific `Helpful` / `Not relevant` feedback with no raw-query storage, public totals, or live ranking effect
+- Sixty feedback submissions per IP per minute on the feedback endpoint
 - Persistent Search, People, and Network navigation
 - Alphabetical directory of every stored researcher
 - Stable, human-readable profile URLs with detailed expertise information

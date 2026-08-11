@@ -1,4 +1,5 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const researchers = sqliteTable("researchers", {
   id: text("id").primaryKey(),
@@ -53,7 +54,44 @@ export const orcidWorks = sqliteTable(
   ],
 );
 
+export const recommendationFeedback = sqliteTable(
+  "recommendation_feedback",
+  {
+    id: text("id").primaryKey(),
+    searchId: text("search_id").notNull(),
+    researcherId: text("researcher_id")
+      .notNull()
+      .references(() => researchers.id, { onDelete: "cascade" }),
+    interpretedTerms: text("interpreted_terms_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull(),
+    evidenceValues: text("evidence_values_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull(),
+    evidenceCategories: text("evidence_categories_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull(),
+    retrievalPosition: integer("retrieval_position").notNull(),
+    displayedPosition: integer("displayed_position"),
+    rankingMode: text("ranking_mode", { enum: ["deterministic", "ai"] }),
+    feedback: text("feedback", { enum: ["helpful", "not_relevant"] }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("recommendation_feedback_search_idx").on(table.searchId),
+    index("recommendation_feedback_researcher_idx").on(table.researcherId),
+  ],
+);
+
 export type Researcher = typeof researchers.$inferSelect;
 export type NewResearcher = typeof researchers.$inferInsert;
 export type OrcidWork = typeof orcidWorks.$inferSelect;
 export type NewOrcidWork = typeof orcidWorks.$inferInsert;
+export type RecommendationFeedback = typeof recommendationFeedback.$inferSelect;
+export type NewRecommendationFeedback =
+  typeof recommendationFeedback.$inferInsert;

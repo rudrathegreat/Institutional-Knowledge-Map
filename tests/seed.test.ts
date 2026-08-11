@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { orcidWorks, researchers } from "@/db/schema";
+import {
+  orcidWorks,
+  recommendationFeedback,
+  researchers,
+} from "@/db/schema";
 import { createDatabase } from "@/lib/db";
 import {
   MOCK_ORCID_WORK_COUNT,
@@ -102,5 +106,40 @@ describe("database seeding", () => {
 
     expect(secondRows).toEqual(firstRows);
     expect(secondWorks).toEqual(firstWorks);
+  });
+
+  it("preserves feedback for researcher IDs that remain in the seed", () => {
+    seedDatabase(TEST_DATABASE_PATH);
+    const firstConnection = createDatabase(TEST_DATABASE_PATH);
+    firstConnection.db
+      .insert(recommendationFeedback)
+      .values({
+        id: "10000000-0000-4000-8000-000000000001",
+        searchId: "20000000-0000-4000-8000-000000000001",
+        researcherId: "researcher_001",
+        interpretedTerms: ["pulsars"],
+        evidenceValues: ["pulsars"],
+        evidenceCategories: ["researchArea"],
+        retrievalPosition: 1,
+        displayedPosition: 1,
+        rankingMode: "deterministic",
+        feedback: "helpful",
+      })
+      .run();
+    firstConnection.sqlite.close();
+
+    seedDatabase(TEST_DATABASE_PATH);
+    const secondConnection = createDatabase(TEST_DATABASE_PATH);
+    const feedbackRows = secondConnection.db
+      .select()
+      .from(recommendationFeedback)
+      .all();
+    secondConnection.sqlite.close();
+
+    expect(feedbackRows).toHaveLength(1);
+    expect(feedbackRows[0]).toMatchObject({
+      researcherId: "researcher_001",
+      feedback: "helpful",
+    });
   });
 });

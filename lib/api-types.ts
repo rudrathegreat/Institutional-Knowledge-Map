@@ -39,6 +39,7 @@ export interface SearchEvidencePayload {
 }
 
 export interface SearchResultPayload {
+  recommendationId: string;
   id: string;
   slug: string;
   name: string;
@@ -61,4 +62,11 @@ export interface SearchErrorPayload {
     code: string;
     message: string;
   };
+}
+
+export type RecommendationFeedbackValue = "helpful" | "not_relevant";
+export type RecommendationRankingMode = "deterministic" | "ai";
+
+export interface RecommendationFeedbackResponsePayload {
+  feedback: RecommendationFeedbackValue;
 }

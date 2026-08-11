@@ -4,6 +4,7 @@ import { FormEvent, useRef, useState } from "react";
 
 import { SearchResult } from "@/components/SearchResult";
 import type {
+  RecommendationRankingMode,
   SearchErrorPayload,
   SearchResponsePayload,
   SearchResultPayload,
@@ -48,6 +49,11 @@ export function SearchExperience({
   const activeRequest = useRef<AbortController | null>(null);
 
   const hasSearched = searchState !== "idle";
+  const rankingMode: RecommendationRankingMode = results.some(
+    (result) => result.isSuggestedContact,
+  )
+    ? "ai"
+    : "deterministic";
 
   function handleQueryChange(nextQuery: string) {
     setQuery(nextQuery);
@@ -345,8 +351,13 @@ export function SearchExperience({
               {results.length} relevant {results.length === 1 ? "person" : "people"}
             </p>
             <div className="resultList">
-              {results.map((result) => (
-                <SearchResult key={result.id} result={result} />
+              {results.map((result, index) => (
+                <SearchResult
+                  key={result.recommendationId}
+                  result={result}
+                  displayedPosition={index + 1}
+                  rankingMode={rankingMode}
+                />
               ))}
             </div>
           </section>

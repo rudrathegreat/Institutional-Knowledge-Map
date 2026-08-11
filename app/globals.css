@@ -145,6 +145,7 @@ button:disabled {
 .searchRefinementOption:focus-visible,
 .resultHeader a:focus-visible,
 .suggestedQuestion button:focus-visible,
+.recommendationFeedback button:focus-visible,
 .evidenceDisclosure summary:focus-visible,
 .directoryPersonLink:focus-visible,
 .backLink:focus-visible,
@@ -624,6 +625,68 @@ button:disabled {
 
 .evidenceDisclosure summary:hover {
   color: var(--accent-hover);
+}
+
+.recommendationFeedback {
+  display: flex;
+  min-height: 34px;
+  max-width: 680px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 20px;
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+}
+
+.recommendationFeedback > p:first-child {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recommendationFeedbackControls {
+  display: flex;
+  gap: 7px;
+}
+
+.recommendationFeedbackControls button {
+  min-height: 32px;
+  padding: 5px 10px;
+  color: var(--secondary-text);
+  background: var(--background);
+  border: 1px solid #d7d7d3;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.recommendationFeedbackControls button:hover:not(:disabled),
+.recommendationFeedbackControls button[aria-pressed="true"] {
+  color: var(--accent-hover);
+  background: var(--accent-subtle);
+  border-color: #c9c9f2;
+}
+
+.recommendationFeedbackControls button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.recommendationFeedbackStatus {
+  min-height: 18px;
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 12px;
+}
+
+.recommendationFeedbackStatus:empty {
+  display: none;
 }
 
 .evidencePanel {

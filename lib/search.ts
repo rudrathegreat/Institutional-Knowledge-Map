@@ -616,8 +616,23 @@ export function searchResearchers(
   query: string,
   interpretedTerms: string[] = [],
 ): SearchResult[] {
+  return searchResearchersWithContext(query, interpretedTerms).results;
+}
+
+export function searchResearchersWithContext(
+  query: string,
+  interpretedTerms: string[] = [],
+): { results: SearchResult[]; validInterpretedTerms: string[] } {
   const db = getDatabase();
   const records = db.select().from(researchers).all();
   const publications = db.select().from(orcidWorks).all();
-  return rankResearchers(records, query, interpretedTerms, publications);
+  const validInterpretedTerms = validateInterpretedTerms(
+    records,
+    interpretedTerms,
+  );
+
+  return {
+    results: rankResearchers(records, query, validInterpretedTerms, publications),
+    validInterpretedTerms,
+  };
 }
