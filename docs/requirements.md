@@ -44,6 +44,7 @@ The application must perform lexical retrieval against stored researcher fields.
 Searchable fields must include:
 
 - name;
+- research-group name;
 - title;
 - role;
 - biography;
@@ -107,6 +108,7 @@ Each result must include at minimum:
 
 - name;
 - title or role;
+- stored research-group affiliations;
 - relevant research areas or expertise;
 - concise relevance explanation when available;
 - a concise, query-specific `Suggested question to ask` on each of the final top three AI-ranked results when available;
@@ -237,7 +239,7 @@ The application must provide an alphabetical directory containing every stored r
 
 ## FR-012 — Person Profiles
 
-Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, biography, research areas, methods, instruments, software, keywords, mock ORCID iD, and newest-first recent publications. Search-result names must link to the same profiles.
+Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, research-group affiliations, biography, research areas, methods, instruments, software, keywords, mock ORCID iD, and newest-first recent publications. Search-result names must link to the same profiles.
 
 ### Acceptance tests
 
@@ -251,13 +253,15 @@ Every researcher must have a stable, human-readable profile URL. Profiles must s
 
 ## FR-013 — People Network
 
-The application must provide a separate Network tab containing every stored researcher as an equal-sized node. Edges must be derived deterministically from shared research areas, methods, keywords, instruments, and software, and must never be described as proof of collaboration or organisational relationships.
+The application must provide a separate Network tab containing every stored researcher as an equal-sized node. Every person's stored research groups must appear as visible tags associated with that person; the primary tag controls the labelled network region and node colour, while secondary tags remain equally readable. People without a group use an explicit neutral region and tag. Edges must be derived deterministically from shared research areas, methods, keywords, instruments, and software, and must never be described as proof of collaboration or organisational relationships.
 
 Users must be able to pan, zoom, drag, find a person by name, inspect people and edges, traverse immediate connections, and open the same stable person profiles used by Search and People.
 
 ### Acceptance tests
 
 - Every stored researcher appears exactly once, including researchers with no meaningful connection.
+- Research-group regions are labelled and tags are written on person nodes so affiliation is not communicated by colour alone.
+- Group membership does not create or strengthen a shared-expertise edge.
 - Generic values occurring in more than half of profiles are excluded from connection evidence.
 - Each connected person contributes their two strongest candidates before edges are unioned and deduplicated.
 - Every edge exposes at least one shared stored value.

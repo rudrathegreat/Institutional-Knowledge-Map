@@ -1,18 +1,24 @@
 import { asc, desc, eq } from "drizzle-orm";
 
-import type { OrcidWork, Researcher } from "@/db/schema";
+import type { OrcidWork } from "@/db/schema";
 import { orcidWorks, researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
+import {
+  attachResearchGroups,
+  type ResearcherWithGroups,
+} from "@/lib/research-groups";
 
-export function listPeople(): Researcher[] {
-  return getDatabase()
+export function listPeople(): ResearcherWithGroups[] {
+  const people = getDatabase()
     .select()
     .from(researchers)
     .orderBy(asc(researchers.name))
     .all();
+
+  return attachResearchGroups(people);
 }
 
-export type PersonProfile = Researcher & { publications: OrcidWork[] };
+export type PersonProfile = ResearcherWithGroups & { publications: OrcidWork[] };
 
 export function getPersonBySlug(slug: string): PersonProfile | undefined {
   const db = getDatabase();
@@ -33,5 +39,7 @@ export function getPersonBySlug(slug: string): PersonProfile | undefined {
     .orderBy(desc(orcidWorks.publicationDate), asc(orcidWorks.title))
     .all();
 
-  return { ...person, publications };
+  const [personWithGroups] = attachResearchGroups([person]);
+
+  return { ...personWithGroups, publications };
 }

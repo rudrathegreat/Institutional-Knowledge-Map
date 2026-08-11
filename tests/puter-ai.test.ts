@@ -34,6 +34,13 @@ const candidates: SearchResultPayload[] = [
     name: "Aisha Rahman",
     title: "Postdoctoral Researcher",
     role: "Fast Radio Burst Astronomer",
+    researchGroups: [
+      {
+        id: "transients-group",
+        name: "Transients & Multi-Messenger Astronomy",
+        isPrimary: true,
+      },
+    ],
     researchAreas: ["fast radio bursts", "radio transients"],
     reason: "Deterministic Aisha reason.",
     evidence: {
@@ -84,6 +91,13 @@ const candidates: SearchResultPayload[] = [
     name: "Priya Nair",
     title: "Lecturer",
     role: "Compact Object Researcher",
+    researchGroups: [
+      {
+        id: "radio-group",
+        name: "Radio Astronomy & Pulsars",
+        isPrimary: true,
+      },
+    ],
     researchAreas: ["compact objects"],
     reason: "Deterministic Priya reason.",
     evidence: {
@@ -680,7 +694,8 @@ describe("Puter explanation merging", () => {
       role: string;
       content: string;
     }>;
-    const userPayload = JSON.parse(messages[1]?.content ?? "{}") as {
+    const userMessage = messages.findLast(({ role }) => role === "user");
+    const userPayload = JSON.parse(userMessage?.content ?? "{}") as {
       candidates: Array<{
         researcherId: string;
         matchingEvidence: Array<{

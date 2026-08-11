@@ -29,6 +29,13 @@
       "when": 1786438800000,
       "tag": "0003_add_recommendation_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786492800000,
+      "tag": "0004_add_research_groups",
+      "breakpoints": true
     }
   ]
 }

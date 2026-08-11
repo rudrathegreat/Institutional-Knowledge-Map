@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import type { OrcidWork, Researcher } from "@/db/schema";
+import type { ResearchGroupSummary } from "@/lib/api-types";
 import {
   buildSearchDocument,
   type MockResearcher,
 } from "@/lib/researcher-data";
-import { loadMockOrcidRecords, loadMockResearchers } from "@/lib/seed";
+import {
+  loadMockOrcidRecords,
+  loadMockResearchGroupMemberships,
+  loadMockResearchGroups,
+  loadMockResearchers,
+} from "@/lib/seed";
 import {
   buildExpertiseVocabulary,
   MAX_PUBLICATION_SCORE,
@@ -16,13 +22,24 @@ import {
 } from "@/lib/search";
 
 const mockResearchers = loadMockResearchers();
-const records: Researcher[] = mockResearchers.map(
+const mockResearchGroups = loadMockResearchGroups();
+const mockGroupMemberships = loadMockResearchGroupMemberships();
+const researchGroupById = new Map(
+  mockResearchGroups.map((group) => [group.id, group]),
+);
+const records: Array<Researcher & { researchGroups: ResearchGroupSummary[] }> = mockResearchers.map(
   (researcher: MockResearcher) => ({
     ...researcher,
     orcidId: null,
     orcidIdStatus: null,
     searchDocument: buildSearchDocument(researcher),
     embedding: null,
+    researchGroups: mockGroupMemberships
+      .filter(({ researcherId }) => researcherId === researcher.id)
+      .map(({ researchGroupId, isPrimary }) => ({
+        ...researchGroupById.get(researchGroupId)!,
+        isPrimary,
+      })),
   }),
 );
 const publications: OrcidWork[] = loadMockOrcidRecords().flatMap((record) =>
@@ -94,7 +111,31 @@ describe("lexical researcher ranking", () => {
     expect(vocabulary).not.toContain(
       "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
     );
+    expect(vocabulary).not.toContain("Radio Astronomy & Pulsars");
     expect(vocabulary.filter((term) => term === "Python")).toHaveLength(1);
+  });
+
+  it("retrieves group members from a raw research-group query", () => {
+    const results = rankResearchers(records, "Radio Astronomy & Pulsars");
+
+    expect(results).toHaveLength(5);
+    expect(
+      results.every((result) =>
+        result.researchGroups.some(({ id }) => id === "group_radio_pulsars"),
+      ),
+    ).toBe(true);
+    expect(results[0]?.reason).toContain(
+      "Radio Astronomy & Pulsars research group",
+    );
+    expect(results[0]?.evidence.matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "researchGroup",
+          value: "Radio Astronomy & Pulsars",
+          origins: ["query"],
+        }),
+      ]),
+    );
   });
 
   it("validates and deduplicates interpreted terms against the vocabulary", () => {

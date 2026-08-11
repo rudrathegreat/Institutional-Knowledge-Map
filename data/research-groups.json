@@ -1,0 +1,8 @@
+[
+  { "id": "group_radio_pulsars", "name": "Radio Astronomy & Pulsars" },
+  { "id": "group_transients", "name": "Transients & Multi-Messenger Astronomy" },
+  { "id": "group_galaxies", "name": "Galaxies & Cosmology" },
+  { "id": "group_gravity", "name": "Gravitational Waves & Relativity" },
+  { "id": "group_stars_planets", "name": "Stars, Planets & Star Formation" },
+  { "id": "group_data_methods", "name": "Data, Software & Research Methods" }
+]

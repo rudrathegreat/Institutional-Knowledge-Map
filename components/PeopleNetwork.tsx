@@ -1,13 +1,21 @@
 "use client";
 
-import cytoscape, { type Core } from "cytoscape";
+import cytoscape, { type Core, type Layouts } from "cytoscape";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import type {
   PeopleGraph,
   PeopleGraphEdge,
   PeopleGraphNode,
+  PeopleGraphResearchGroup,
   SharedEvidence,
 } from "@/lib/people-graph";
 
@@ -22,19 +30,106 @@ type Selection =
   | undefined;
 
 const GRAPH_PADDING = 48;
+const UNASSIGNED_GROUP_ID = "__unassigned__";
+const UNASSIGNED_GROUP_NAME = "No research group";
+const GROUP_PALETTE = [
+  { node: "#e6e6fb", border: "#a9a9dc", region: "#f4f4fd" },
+  { node: "#dff1ec", border: "#91c7b8", region: "#f1f9f7" },
+  { node: "#f4ead9", border: "#d2b98c", region: "#fbf7ef" },
+  { node: "#e6edf7", border: "#9eb3d1", region: "#f3f6fa" },
+  { node: "#f1e5ef", border: "#c5a0bf", region: "#faf3f8" },
+  { node: "#e8efe0", border: "#aabe96", region: "#f5f8f1" },
+];
+const UNASSIGNED_PALETTE = {
+  node: "#ececea",
+  border: "#bdbdb7",
+  region: "#f7f7f5",
+};
+
+interface DisplayGroup extends PeopleGraphResearchGroup {
+  palette: (typeof GROUP_PALETTE)[number];
+}
+
+function groupElementId(groupId: string): string {
+  return `research-group:${groupId}`;
+}
+
+function displayGroups(graph: PeopleGraph): DisplayGroup[] {
+  // `groups` was added after the original graph shape. During a rolling deploy
+  // or fast refresh, the client can briefly receive a graph from an older
+  // server bundle, so also recover tag definitions from the person records.
+  const groupsById = new Map<string, PeopleGraphResearchGroup>();
+  for (const group of graph.groups ?? []) {
+    groupsById.set(group.id, group);
+  }
+  for (const node of graph.nodes) {
+    for (const { id, name } of node.researchGroups ?? []) {
+      groupsById.set(id, { id, name });
+    }
+  }
+  const groups = [...groupsById.values()]
+    .sort((left, right) => left.name.localeCompare(right.name, "en"))
+    .map((group, index) => ({
+      ...group,
+      palette: GROUP_PALETTE[index % GROUP_PALETTE.length],
+    }));
+
+  if (graph.nodes.some((node) => !node.primaryResearchGroupId)) {
+    groups.push({
+      id: UNASSIGNED_GROUP_ID,
+      name: UNASSIGNED_GROUP_NAME,
+      palette: UNASSIGNED_PALETTE,
+    });
+  }
+
+  return groups;
+}
 
 function evidenceSummary(evidence: SharedEvidence[]): string {
   return evidence.map(({ label }) => label).join(" · ");
 }
 
+function researchGroupNames(person: PeopleGraphNode): string[] {
+  return (person.researchGroups ?? []).map(({ name }) => name);
+}
+
 function graphElements(graph: PeopleGraph) {
+  const groups = displayGroups(graph);
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
+
   return [
-    ...graph.nodes.map((node) => ({
+    ...groups.map((group) => ({
       data: {
-        id: node.id,
-        label: node.name,
+        id: groupElementId(group.id),
+        label: group.name,
+        groupBackground: group.palette.region,
+        groupBorder: group.palette.border,
       },
+      classes: "research-group",
     })),
+    ...graph.nodes.map((node) => {
+      const groupNames = researchGroupNames(node);
+      const primaryGroupId =
+        node.primaryResearchGroupId ??
+        (node.researchGroups ?? []).find(({ isPrimary }) => isPrimary)?.id ??
+        UNASSIGNED_GROUP_ID;
+      const palette =
+        groupsById.get(primaryGroupId)?.palette ?? UNASSIGNED_PALETTE;
+      const groupLabel = groupNames.join(" · ") || UNASSIGNED_GROUP_NAME;
+
+      return {
+        data: {
+          id: node.id,
+          label: `${node.name}\n${groupLabel}`,
+          groupLabel,
+          parent: groupElementId(primaryGroupId),
+          nodeHeight: groupNames.length > 1 ? 102 : 74,
+          nodeBackground: palette.node,
+          nodeBorder: palette.border,
+        },
+        classes: "person",
+      };
+    }),
     ...graph.edges.map((edge) => ({
       data: {
         id: edge.id,
@@ -44,6 +139,28 @@ function graphElements(graph: PeopleGraph) {
       },
     })),
   ];
+}
+
+function ResearchGroupMemberships({ person }: { person: PeopleGraphNode }) {
+  const researchGroups = person.researchGroups ?? [];
+
+  return (
+    <section className="networkMemberships" aria-labelledby="network-groups-title">
+      <h3 id="network-groups-title">Research groups</h3>
+      {researchGroups.length > 0 ? (
+        <ul>
+          {researchGroups.map((group) => (
+            <li key={group.id}>
+              {group.name}
+              {group.isPrimary ? <span>Primary</span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No research group listed.</p>
+      )}
+    </section>
+  );
 }
 
 function connectedPeople(
@@ -99,6 +216,9 @@ function InitialInspector({
               <button type="button" onClick={() => onSelect(node.id)}>
                 <span>{node.name}</span>
                 <small>{node.role}</small>
+                <small className="networkDirectoryTags">
+                  {researchGroupNames(node).join(" · ") || UNASSIGNED_GROUP_NAME}
+                </small>
               </button>
             </li>
           ))}
@@ -126,6 +246,7 @@ function PersonInspector({
       <p className="networkPersonRole">
         {person.title} <span aria-hidden="true">·</span> {person.role}
       </p>
+      <ResearchGroupMemberships person={person} />
       <ul className="networkResearchAreas" aria-label="Research areas">
         {person.researchAreas.map((area) => (
           <li key={area}>{area}</li>
@@ -191,8 +312,8 @@ function ConnectionInspector({
         {source.name} <span aria-hidden="true">↔</span> {target.name}
       </h2>
       <p className="networkConnectionClarifier">
-        This connection reflects shared stored expertise, not a claimed
-        collaboration or reporting relationship.
+        This line reflects shared stored expertise. Research-group tags show
+        affiliation; neither establishes collaboration or reporting relationships.
       </p>
 
       <dl className="networkEvidenceList">
@@ -225,6 +346,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
   const [selection, setSelection] = useState<Selection>();
   const [searchValue, setSearchValue] = useState("");
   const [searchError, setSearchError] = useState("");
+  const groups = useMemo(() => displayGroups(graph), [graph]);
   const peopleById = useMemo(
     () => new Map(graph.nodes.map((node) => [node.id, node])),
     [graph.nodes],
@@ -240,34 +362,57 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
       return;
     }
 
+    let active = true;
+    let instance: Core | undefined;
+    let layout: Layouts | undefined;
     let resizeObserver: ResizeObserver | undefined;
 
     try {
-      const instance = cytoscape({
+      instance = cytoscape({
         container: containerRef.current,
         elements: graphElements(graph),
-        minZoom: 0.35,
+        minZoom: 0.12,
         maxZoom: 2.25,
-        wheelSensitivity: 0.2,
         boxSelectionEnabled: false,
         style: [
           {
-            selector: "node",
+            selector: "node.research-group",
             style: {
-              width: 54,
-              height: 54,
+              shape: "roundrectangle",
               label: "data(label)",
-              "background-color": "#eeeeff",
-              "border-color": "#b8b8ee",
+              "background-color": "data(groupBackground)",
+              "background-opacity": 0.72,
+              "border-color": "data(groupBorder)",
+              "border-width": 1.5,
+              "font-family": "Inter, ui-sans-serif, system-ui, sans-serif",
+              "font-size": 13,
+              "font-weight": 600,
+              color: "#4b4b58",
+              "text-halign": "center",
+              "text-valign": "top",
+              "text-margin-y": -10,
+              padding: "24px",
+              "transition-property": "opacity",
+              "transition-duration": 150,
+            },
+          },
+          {
+            selector: "node.person",
+            style: {
+              width: 150,
+              height: "data(nodeHeight)",
+              shape: "roundrectangle",
+              label: "data(label)",
+              "background-color": "data(nodeBackground)",
+              "border-color": "data(nodeBorder)",
               "border-width": 1.5,
               color: "#31313f",
               "font-family": "Inter, ui-sans-serif, system-ui, sans-serif",
-              "font-size": 12,
-              "font-weight": 550,
+              "font-size": 11,
+              "font-weight": 500,
               "text-halign": "center",
-              "text-valign": "bottom",
-              "text-margin-y": 10,
-              "text-max-width": "104px",
+              "text-valign": "center",
+              "text-max-width": "136px",
               "text-wrap": "wrap",
               "transition-property": "opacity, background-color, border-color",
               "transition-duration": 150,
@@ -291,12 +436,12 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
             },
           },
           {
-            selector: "node.is-selected",
+            selector: "node.person.is-selected",
             style: {
               "background-color": "#5b5bd6",
               "border-color": "#4c4cc4",
               color: "#1f1f1f",
-              "font-weight": 650,
+              "font-weight": 600,
             },
           },
           {
@@ -312,7 +457,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
       });
 
       graphRef.current = instance;
-      instance.on("tap", "node", (event) => {
+      instance.on("tap", "node.person", (event) => {
         setSelection({ kind: "node", id: event.target.id() });
         setSearchError("");
       });
@@ -326,36 +471,52 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
         }
       });
 
-      const reduceMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-      const layout = instance.layout({
+      layout = instance.layout({
         name: "cose",
-        animate: !reduceMotion,
-        animationDuration: reduceMotion ? 0 : 450,
+        animate: false,
         fit: true,
         padding: GRAPH_PADDING,
-        nodeRepulsion: 9000,
-        idealEdgeLength: 110,
-        edgeElasticity: 100,
+        nodeRepulsion: 4000,
+        idealEdgeLength: 70,
+        edgeElasticity: 60,
         nestingFactor: 1.2,
-        gravity: 0.2,
+        gravity: 0.8,
         numIter: 1000,
+        initialTemp: 20,
+        coolingFactor: 0.95,
         randomize: true,
       });
-      layout.one("layoutstop", () => setStatus("ready"));
+      layout.one("layoutstop", () => {
+        if (active) {
+          setStatus("ready");
+        }
+      });
       layout.run();
 
-      resizeObserver = new ResizeObserver(() => instance.resize());
+      resizeObserver = new ResizeObserver(() => instance?.resize());
       resizeObserver.observe(containerRef.current);
-    } catch {
-      window.setTimeout(() => setStatus("error"), 0);
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          "[People network] Failed to initialize the interactive graph.",
+          error,
+        );
+      }
+      window.setTimeout(() => {
+        if (active) {
+          setStatus("error");
+        }
+      }, 0);
     }
 
     return () => {
+      active = false;
       resizeObserver?.disconnect();
-      graphRef.current?.destroy();
-      graphRef.current = null;
+      layout?.stop();
+      instance?.destroy();
+      if (graphRef.current === instance) {
+        graphRef.current = null;
+      }
     };
   }, [graph]);
 
@@ -523,6 +684,25 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
             </p>
           ) : null}
         </form>
+
+        <div className="networkGroupLegend" aria-label="Research group tags">
+          <span>Research group tags</span>
+          <ul>
+            {groups.map((group) => (
+              <li key={group.id}>
+                <span
+                  aria-hidden="true"
+                  className="networkGroupSwatch"
+                  style={{
+                    "--group-swatch": group.palette.node,
+                    "--group-swatch-border": group.palette.border,
+                  } as CSSProperties}
+                />
+                {group.name}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <div className="networkControls" aria-label="Network view controls">
           <button

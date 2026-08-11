@@ -84,6 +84,24 @@ export default async function PersonPage({ params }: PersonPageProps) {
             <span aria-hidden="true"> · </span>
             {person.role}
           </p>
+          <section
+            className="profileResearchGroups"
+            aria-labelledby="profile-research-groups-title"
+          >
+            <h2 id="profile-research-groups-title">Research groups</h2>
+            {person.researchGroups.length > 0 ? (
+              <ul>
+                {person.researchGroups.map((group) => (
+                  <li key={group.id}>
+                    {group.name}
+                    {group.isPrimary ? <span>Primary</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No research group listed.</p>
+            )}
+          </section>
           {person.orcidId && person.orcidIdStatus === "mock" && (
             <p className="mockOrcidId">
               <span>Mock ORCID iD</span>

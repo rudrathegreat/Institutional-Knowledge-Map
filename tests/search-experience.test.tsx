@@ -222,7 +222,7 @@ describe("SearchExperience", () => {
     await user.click(screen.getByRole("button", { name: "Search" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Enter a name, topic, method, instrument, software term, or question.",
+      "Enter a name, research group, topic, method, instrument, software term, or question.",
     );
   });
 

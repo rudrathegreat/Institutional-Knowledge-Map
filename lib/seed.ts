@@ -5,7 +5,12 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import fs from "node:fs";
 import path from "node:path";
 
-import { orcidWorks, researchers } from "@/db/schema";
+import {
+  orcidWorks,
+  researcherGroupMemberships,
+  researchers,
+  researchGroups,
+} from "@/db/schema";
 import { DEFAULT_DATABASE_PATH } from "@/lib/db";
 import {
   buildSearchDocument,
@@ -13,6 +18,9 @@ import {
 } from "@/lib/researcher-data";
 
 export const MOCK_RESEARCHER_COUNT = 30;
+export const MOCK_RESEARCH_GROUP_COUNT = 6;
+export const MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT = 39;
+export const MOCK_PRIMARY_MEMBERSHIP_COUNT = MOCK_RESEARCHER_COUNT;
 export const MOCK_ORCID_WORKS_PER_RESEARCHER = 3;
 export const MOCK_ORCID_WORK_COUNT =
   MOCK_RESEARCHER_COUNT * MOCK_ORCID_WORKS_PER_RESEARCHER;
@@ -31,6 +39,17 @@ export interface MockOrcidRecord {
   works: MockOrcidWork[];
 }
 
+export interface MockResearchGroup {
+  id: string;
+  name: string;
+}
+
+export interface MockResearchGroupMembership {
+  researcherId: string;
+  researchGroupId: string;
+  isPrimary: boolean;
+}
+
 export function loadMockResearchers(): MockResearcher[] {
   const dataPath = path.resolve(process.cwd(), "data", "researchers.json");
   return JSON.parse(fs.readFileSync(dataPath, "utf8")) as MockResearcher[];
@@ -39,6 +58,72 @@ export function loadMockResearchers(): MockResearcher[] {
 export function loadMockOrcidRecords(): MockOrcidRecord[] {
   const dataPath = path.resolve(process.cwd(), "data", "orcid-records.json");
   return JSON.parse(fs.readFileSync(dataPath, "utf8")) as MockOrcidRecord[];
+}
+
+export function loadMockResearchGroups(): MockResearchGroup[] {
+  const dataPath = path.resolve(process.cwd(), "data", "research-groups.json");
+  return JSON.parse(fs.readFileSync(dataPath, "utf8")) as MockResearchGroup[];
+}
+
+export function loadMockResearchGroupMemberships(): MockResearchGroupMembership[] {
+  const dataPath = path.resolve(
+    process.cwd(),
+    "data",
+    "research-group-memberships.json",
+  );
+  return JSON.parse(
+    fs.readFileSync(dataPath, "utf8"),
+  ) as MockResearchGroupMembership[];
+}
+
+function validateMockResearchGroups(
+  mockResearchers: MockResearcher[],
+  mockResearchGroups: MockResearchGroup[],
+  memberships: MockResearchGroupMembership[],
+): void {
+  const researcherIds = new Set(mockResearchers.map(({ id }) => id));
+  const groupIds = new Set(mockResearchGroups.map(({ id }) => id));
+  const groupNames = mockResearchGroups.map(({ name }) => name.trim());
+
+  if (
+    mockResearchGroups.length !== MOCK_RESEARCH_GROUP_COUNT ||
+    groupIds.size !== MOCK_RESEARCH_GROUP_COUNT ||
+    groupNames.some((name) => !name) ||
+    new Set(groupNames).size !== MOCK_RESEARCH_GROUP_COUNT
+  ) {
+    throw new Error(
+      `Mock research groups must contain ${MOCK_RESEARCH_GROUP_COUNT} unique IDs and names.`,
+    );
+  }
+
+  if (
+    memberships.length !== MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT ||
+    memberships.some(
+      ({ researcherId, researchGroupId }) =>
+        !researcherIds.has(researcherId) || !groupIds.has(researchGroupId),
+    ) ||
+    new Set(
+      memberships.map(
+        ({ researcherId, researchGroupId }) =>
+          `${researcherId}:${researchGroupId}`,
+      ),
+    ).size !== memberships.length
+  ) {
+    throw new Error(
+      `Research-group memberships must contain ${MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT} valid, unique researcher/group pairs.`,
+    );
+  }
+
+  const primaryMemberships = memberships.filter(({ isPrimary }) => isPrimary);
+  if (
+    primaryMemberships.length !== MOCK_PRIMARY_MEMBERSHIP_COUNT ||
+    new Set(primaryMemberships.map(({ researcherId }) => researcherId)).size !==
+      MOCK_RESEARCHER_COUNT
+  ) {
+    throw new Error(
+      "Every mock researcher must have exactly one primary research group.",
+    );
+  }
 }
 
 function validateMockOrcidRecords(
@@ -119,6 +204,8 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
 
   const mockResearchers = loadMockResearchers();
   const mockOrcidRecords = loadMockOrcidRecords();
+  const mockResearchGroups = loadMockResearchGroups();
+  const mockResearchGroupMemberships = loadMockResearchGroupMemberships();
 
   if (mockResearchers.length !== MOCK_RESEARCHER_COUNT) {
     sqlite.close();
@@ -138,19 +225,43 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
   }
 
   validateMockOrcidRecords(mockResearchers, mockOrcidRecords);
+  validateMockResearchGroups(
+    mockResearchers,
+    mockResearchGroups,
+    mockResearchGroupMemberships,
+  );
 
   const orcidRecordByResearcherId = new Map(
     mockOrcidRecords.map((record) => [record.researcherId, record]),
   );
 
-  const rows = mockResearchers.map((researcher) => ({
-    ...researcher,
-    orcidId: orcidRecordByResearcherId.get(researcher.id)?.orcidId ?? null,
-    orcidIdStatus:
-      orcidRecordByResearcherId.get(researcher.id)?.orcidIdStatus ?? null,
-    searchDocument: buildSearchDocument(researcher),
-    embedding: null,
-  }));
+  const groupNameById = new Map(
+    mockResearchGroups.map(({ id, name }) => [id, name]),
+  );
+  const groupNamesByResearcherId = new Map<string, string[]>();
+  for (const membership of mockResearchGroupMemberships) {
+    const names = groupNamesByResearcherId.get(membership.researcherId) ?? [];
+    const groupName = groupNameById.get(membership.researchGroupId);
+    if (groupName) {
+      names.push(groupName);
+      groupNamesByResearcherId.set(membership.researcherId, names);
+    }
+  }
+
+  const rows = mockResearchers.map((researcher) => {
+    const researchGroupNames = (
+      groupNamesByResearcherId.get(researcher.id) ?? []
+    ).sort((left, right) => left.localeCompare(right, "en"));
+
+    return {
+      ...researcher,
+      orcidId: orcidRecordByResearcherId.get(researcher.id)?.orcidId ?? null,
+      orcidIdStatus:
+        orcidRecordByResearcherId.get(researcher.id)?.orcidIdStatus ?? null,
+      searchDocument: buildSearchDocument(researcher, researchGroupNames),
+      embedding: null,
+    };
+  });
 
   const workRows = mockOrcidRecords.flatMap((record) =>
     record.works.map((work) => ({
@@ -165,6 +276,7 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
 
   db.transaction((transaction) => {
     transaction.delete(orcidWorks).run();
+    transaction.delete(researcherGroupMemberships).run();
 
     for (const row of rows) {
       transaction
@@ -180,6 +292,26 @@ export function seedDatabase(databasePath = DEFAULT_DATABASE_PATH): number {
     transaction
       .delete(researchers)
       .where(notInArray(researchers.id, rows.map(({ id }) => id)))
+      .run();
+
+    for (const group of mockResearchGroups) {
+      transaction
+        .insert(researchGroups)
+        .values(group)
+        .onConflictDoUpdate({
+          target: researchGroups.id,
+          set: group,
+        })
+        .run();
+    }
+
+    transaction
+      .delete(researchGroups)
+      .where(notInArray(researchGroups.id, mockResearchGroups.map(({ id }) => id)))
+      .run();
+    transaction
+      .insert(researcherGroupMemberships)
+      .values(mockResearchGroupMemberships)
       .run();
     transaction.insert(orcidWorks).values(workRows).run();
   });

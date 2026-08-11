@@ -6,12 +6,19 @@ export interface PublicationEvidencePayload {
   dataSource: "mock" | "orcid";
 }
 
+export interface ResearchGroupSummary {
+  id: string;
+  name: string;
+  isPrimary: boolean;
+}
+
 export type SearchEvidenceOrigin = "query" | "interpreted";
 
 export type SearchEvidenceCategory =
   | "name"
   | "title"
   | "role"
+  | "researchGroup"
   | "researchArea"
   | "method"
   | "instrument"
@@ -45,6 +52,7 @@ export interface SearchResultPayload {
   name: string;
   title: string;
   role: string;
+  researchGroups: ResearchGroupSummary[];
   researchAreas: string[];
   reason: string;
   suggestedQuestion?: string;

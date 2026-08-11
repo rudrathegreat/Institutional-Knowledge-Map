@@ -1,16 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   orcidWorks,
   recommendationFeedback,
+  researcherGroupMemberships,
   researchers,
+  researchGroups,
 } from "@/db/schema";
 import { createDatabase } from "@/lib/db";
 import {
   MOCK_ORCID_WORK_COUNT,
   MOCK_ORCID_WORKS_PER_RESEARCHER,
+  MOCK_PRIMARY_MEMBERSHIP_COUNT,
+  MOCK_RESEARCH_GROUP_COUNT,
+  MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT,
   MOCK_RESEARCHER_COUNT,
   seedDatabase,
 } from "@/lib/seed";
@@ -37,8 +43,11 @@ describe("database seeding", () => {
     const connection = createDatabase(TEST_DATABASE_PATH);
     const rows = connection.db.select().from(researchers).all();
     const workRows = connection.db.select().from(orcidWorks).all();
-    connection.sqlite.close();
-
+    const groupRows = connection.db.select().from(researchGroups).all();
+    const membershipRows = connection.db
+      .select()
+      .from(researcherGroupMemberships)
+      .all();
     expect(rows).toHaveLength(MOCK_RESEARCHER_COUNT);
     expect(rows.every((row) => row.name && row.searchDocument)).toBe(true);
     expect(rows.every((row) => row.slug.length > 0)).toBe(true);
@@ -66,6 +75,21 @@ describe("database seeding", () => {
       MOCK_ORCID_WORK_COUNT,
     );
     expect(workRows.every((work) => work.dataSource === "mock")).toBe(true);
+    expect(groupRows).toHaveLength(MOCK_RESEARCH_GROUP_COUNT);
+    expect(new Set(groupRows.map(({ name }) => name))).toHaveLength(
+      MOCK_RESEARCH_GROUP_COUNT,
+    );
+    expect(membershipRows).toHaveLength(MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT);
+    expect(
+      membershipRows.filter(({ isPrimary }) => isPrimary),
+    ).toHaveLength(MOCK_PRIMARY_MEMBERSHIP_COUNT);
+    expect(membershipRows.some(({ isPrimary }) => !isPrimary)).toBe(true);
+    expect(
+      new Set(membershipRows.map(({ researcherId }) => researcherId)),
+    ).toHaveLength(MOCK_RESEARCHER_COUNT);
+    expect(
+      rows.every((row) => row.searchDocument.includes("Research groups:")),
+    ).toBe(true);
     expect(
       rows.every(
         (row) =>
@@ -73,6 +97,38 @@ describe("database seeding", () => {
           MOCK_ORCID_WORKS_PER_RESEARCHER,
       ),
     ).toBe(true);
+
+    connection.db
+      .insert(researcherGroupMemberships)
+      .values({
+        researcherId: "researcher_001",
+        researchGroupId: "group_transients",
+        isPrimary: false,
+      })
+      .run();
+    expect(
+      connection.db
+        .select()
+        .from(researcherGroupMemberships)
+        .all()
+        .filter(({ researcherId }) => researcherId === "researcher_001"),
+    ).toHaveLength(2);
+    expect(() =>
+      connection.db
+        .update(researcherGroupMemberships)
+        .set({ isPrimary: true })
+        .where(
+          and(
+            eq(researcherGroupMemberships.researcherId, "researcher_001"),
+            eq(
+              researcherGroupMemberships.researchGroupId,
+              "group_transients",
+            ),
+          ),
+        )
+        .run(),
+    ).toThrow();
+    connection.sqlite.close();
   });
 
   it("re-seeds the same IDs and records deterministically", () => {

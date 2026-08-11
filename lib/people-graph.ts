@@ -1,4 +1,5 @@
-import type { Researcher } from "@/db/schema";
+import type { Researcher, ResearchGroup } from "@/db/schema";
+import type { ResearchGroupSummary } from "@/lib/api-types";
 
 export type GraphEvidenceCategory =
   | "research area"
@@ -18,7 +19,14 @@ export interface PeopleGraphNode {
   name: string;
   title: string;
   role: string;
+  researchGroups: ResearchGroupSummary[];
+  primaryResearchGroupId?: string;
   researchAreas: string[];
+}
+
+export interface PeopleGraphResearchGroup {
+  id: string;
+  name: string;
 }
 
 export interface PeopleGraphEdge {
@@ -30,9 +38,14 @@ export interface PeopleGraphEdge {
 }
 
 export interface PeopleGraph {
+  groups: PeopleGraphResearchGroup[];
   nodes: PeopleGraphNode[];
   edges: PeopleGraphEdge[];
 }
+
+type GraphResearcher = Researcher & {
+  researchGroups?: ResearchGroupSummary[];
+};
 
 type ResearcherListField =
   | "researchAreas"
@@ -159,7 +172,10 @@ function compareCandidateEdges(
   );
 }
 
-export function buildPeopleGraph(researchers: Researcher[]): PeopleGraph {
+export function buildPeopleGraph(
+  researchers: GraphResearcher[],
+  researchGroups: Array<Pick<ResearchGroup, "id" | "name">> = [],
+): PeopleGraph {
   const sortedResearchers = [...researchers].sort(
     (left, right) =>
       compareText(left.name, right.name) || compareText(left.id, right.id),
@@ -211,13 +227,19 @@ export function buildPeopleGraph(researchers: Researcher[]): PeopleGraph {
     .sort((left, right) => compareText(left.id, right.id));
 
   return {
+    groups: [...researchGroups]
+      .map(({ id, name }) => ({ id, name }))
+      .sort((left, right) => compareText(left.name, right.name)),
     nodes: sortedResearchers.map(
-      ({ id, slug, name, title, role, researchAreas }) => ({
+      ({ id, slug, name, title, role, researchAreas, researchGroups = [] }) => ({
         id,
         slug,
         name,
         title,
         role,
+        researchGroups,
+        primaryResearchGroupId: researchGroups.find(({ isPrimary }) => isPrimary)
+          ?.id,
         researchAreas,
       }),
     ),

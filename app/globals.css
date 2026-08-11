@@ -524,6 +524,21 @@ button:disabled {
   font-size: 14px;
 }
 
+.resultResearchGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  margin: 11px 0 0;
+  color: #555562;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.resultResearchGroups > span {
+  color: var(--muted-text);
+  font-weight: 600;
+}
+
 .expertise {
   margin: 15px 0 0;
   color: #4e4e4e;
@@ -947,6 +962,55 @@ button:disabled {
   font-size: 16px;
 }
 
+.profileResearchGroups {
+  margin-top: 20px;
+}
+
+.profileResearchGroups h2 {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profileResearchGroups ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profileResearchGroups li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  color: #494956;
+  background: #f4f4fd;
+  border: 1px solid #dadaf2;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.profileResearchGroups li span,
+.networkMemberships li span {
+  color: #5b5b79;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profileResearchGroups > p {
+  margin: 8px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
 .mockOrcidId {
   display: inline-flex;
   align-items: center;
@@ -1159,6 +1223,46 @@ button:disabled {
   gap: 7px;
 }
 
+.networkGroupLegend {
+  min-width: 250px;
+  max-width: 390px;
+}
+
+.networkGroupLegend > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--secondary-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.networkGroupLegend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.networkGroupLegend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #555561;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.networkGroupSwatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  background: var(--group-swatch);
+  border: 1px solid var(--group-swatch-border);
+  border-radius: 3px;
+}
+
 .networkControls button {
   width: 42px;
   padding: 0;
@@ -1325,11 +1429,64 @@ button:disabled {
   line-height: 1.45;
 }
 
+.networkPeopleDirectory button .networkDirectoryTags {
+  display: inline-flex;
+  margin-top: 3px;
+  padding: 3px 6px;
+  color: #575774;
+  background: #f4f4fd;
+  border: 1px solid #dadaf2;
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .networkPersonRole {
   margin: 8px 0 0;
   color: var(--secondary-text);
   font-size: 14px;
   line-height: 1.55;
+}
+
+.networkMemberships {
+  margin-top: 18px;
+}
+
+.networkMemberships h3 {
+  margin: 0 0 7px;
+  color: var(--muted-text);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.networkMemberships ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.networkMemberships li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  color: #4d4d59;
+  background: #f4f4fd;
+  border: 1px solid #dadaf2;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.networkMemberships p {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: 13px;
 }
 
 .networkResearchAreas {
@@ -1661,6 +1818,12 @@ button:disabled {
 @media (max-width: 900px) {
   .networkToolbar {
     flex-wrap: wrap;
+  }
+
+  .networkGroupLegend {
+    order: 3;
+    width: 100%;
+    max-width: none;
   }
 
   .networkWorkspace {

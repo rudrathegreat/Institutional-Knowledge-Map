@@ -139,7 +139,9 @@ export function SearchExperience({
 
     if (!trimmedQuery) {
       setResults([]);
-      setMessage("Enter a name, topic, method, instrument, software term, or question.");
+      setMessage(
+        "Enter a name, research group, topic, method, instrument, software term, or question.",
+      );
       setSearchState("error");
       return;
     }
@@ -321,7 +323,7 @@ export function SearchExperience({
               type="search"
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}
-              placeholder="Search a person, topic, method, or ask a question…"
+              placeholder="Search a person, research group, topic, method, or question…"
               autoComplete="off"
               aria-describedby={
                 message

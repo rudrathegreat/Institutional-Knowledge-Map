@@ -28,6 +28,7 @@ const renderer = vi.hoisted(() => {
     return layout;
   });
   layout.run = vi.fn(() => layout);
+  layout.stop = vi.fn(() => layout);
 
   core.on = vi.fn(
     (
@@ -55,7 +56,10 @@ const renderer = vi.hoisted(() => {
   return {
     collection,
     core,
-    factory: vi.fn(() => core),
+    factory: vi.fn((options?: unknown) => {
+      void options;
+      return core;
+    }),
     handlers,
     layout,
   };
@@ -66,6 +70,9 @@ vi.mock("cytoscape", () => ({
 }));
 
 const graph: PeopleGraph = {
+  groups: [
+    { id: "radio-group", name: "Radio Astronomy & Pulsars" },
+  ],
   nodes: [
     {
       id: "maya",
@@ -73,6 +80,14 @@ const graph: PeopleGraph = {
       name: "Maya Chen",
       title: "Senior Research Fellow",
       role: "Pulsar Astronomer",
+      researchGroups: [
+        {
+          id: "radio-group",
+          name: "Radio Astronomy & Pulsars",
+          isPrimary: true,
+        },
+      ],
+      primaryResearchGroupId: "radio-group",
       researchAreas: ["pulsars", "radio astronomy"],
     },
     {
@@ -81,6 +96,14 @@ const graph: PeopleGraph = {
       name: "Daniel Brooks",
       title: "Research Fellow",
       role: "Radio Astronomer",
+      researchGroups: [
+        {
+          id: "radio-group",
+          name: "Radio Astronomy & Pulsars",
+          isPrimary: true,
+        },
+      ],
+      primaryResearchGroupId: "radio-group",
       researchAreas: ["pulsars", "interstellar medium"],
     },
   ],
@@ -106,6 +129,7 @@ class MockResizeObserver {
 
 describe("PeopleNetwork", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     renderer.factory.mockImplementation(() => renderer.core);
     Object.keys(renderer.handlers).forEach((key) => delete renderer.handlers[key]);
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
@@ -136,6 +160,10 @@ describe("PeopleNetwork", () => {
       "href",
       "/people/maya-chen",
     );
+    expect(
+      screen.getByRole("heading", { name: "Research groups" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Primary")).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: /Daniel Brooks.*pulsars/ }),
@@ -143,6 +171,62 @@ describe("PeopleNetwork", () => {
     expect(
       screen.getByRole("heading", { name: "Daniel Brooks" }),
     ).toBeInTheDocument();
+  });
+
+  it("groups people by their primary tag and keeps tags on each node", () => {
+    render(<PeopleNetwork graph={graph} />);
+
+    const configuration = renderer.factory.mock.calls[0]?.[0] as unknown as {
+      elements: Array<{
+        classes?: string;
+        data: { id: string; parent?: string; label?: string; groupLabel?: string };
+      }>;
+    };
+    const mayaElement = configuration.elements.find(
+      ({ data }) => data.id === "maya",
+    );
+
+    expect(
+      configuration.elements.find(
+        ({ classes }) => classes === "research-group",
+      )?.data,
+    ).toMatchObject({
+      id: "research-group:radio-group",
+      label: "Radio Astronomy & Pulsars",
+    });
+    expect(mayaElement).toMatchObject({
+      classes: "person",
+      data: {
+        label: "Maya Chen\nRadio Astronomy & Pulsars",
+        groupLabel: "Radio Astronomy & Pulsars",
+        parent: "research-group:radio-group",
+      },
+    });
+    expect(
+      screen.getByLabelText("Research group tags"),
+    ).toHaveTextContent("Radio Astronomy & Pulsars");
+  });
+
+  it("survives Strict Mode mount, cleanup, remount, and unmount", () => {
+    const { unmount } = render(<PeopleNetwork graph={graph} />, {
+      reactStrictMode: true,
+    });
+
+    expect(renderer.factory).toHaveBeenCalledTimes(2);
+    expect(renderer.core.layout).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "cose", animate: false }),
+    );
+    expect(renderer.layout.stop).toHaveBeenCalledTimes(1);
+    expect(renderer.core.destroy).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    expect(renderer.layout.stop).toHaveBeenCalledTimes(2);
+    expect(renderer.core.destroy).toHaveBeenCalledTimes(2);
+    const stopCalls = renderer.layout.stop.mock.invocationCallOrder;
+    const destroyCalls = renderer.core.destroy.mock.invocationCallOrder;
+    expect(stopCalls[0]).toBeLessThan(destroyCalls[0]);
+    expect(stopCalls[1]).toBeLessThan(destroyCalls[1]);
   });
 
   it("inspects a graph edge and exposes both endpoint actions", () => {
@@ -155,7 +239,7 @@ describe("PeopleNetwork", () => {
     });
 
     expect(
-      screen.getByText(/shared stored expertise, not a claimed collaboration/),
+      screen.getByText(/line reflects shared stored expertise/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Focus Maya Chen" }),
@@ -203,7 +287,7 @@ describe("PeopleNetwork", () => {
   });
 
   it("renders an empty state when there are no people", () => {
-    render(<PeopleNetwork graph={{ nodes: [], edges: [] }} />);
+    render(<PeopleNetwork graph={{ groups: [], nodes: [], edges: [] }} />);
 
     expect(
       screen.getByRole("heading", { name: "No people to map yet" }),
@@ -212,5 +296,30 @@ describe("PeopleNetwork", () => {
       "href",
       "/people",
     );
+  });
+
+  it("accepts the graph shape from before research groups were added", () => {
+    const legacyGraph = {
+      nodes: graph.nodes.map(
+        ({ id, slug, name, title, role, researchAreas }) => ({
+          id,
+          slug,
+          name,
+          title,
+          role,
+          researchAreas,
+        }),
+      ),
+      edges: graph.edges,
+    } as unknown as PeopleGraph;
+
+    render(<PeopleNetwork graph={legacyGraph} />);
+
+    expect(screen.getByLabelText("Research group tags")).toHaveTextContent(
+      "No research group",
+    );
+    expect(
+      screen.getByRole("button", { name: /Maya Chen.*Pulsar Astronomer/ }),
+    ).toBeInTheDocument();
   });
 });

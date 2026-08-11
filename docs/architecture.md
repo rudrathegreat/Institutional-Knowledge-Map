@@ -156,6 +156,10 @@ embedding_json
 
 `embedding_json` remains nullable for schema compatibility and is deliberately unused. Seeded rows store `null`; this architecture does not generate or compare vectors.
 
+### `research_groups` and `researcher_group_memberships`
+
+Research groups are stable named records used as database-backed tags. A cascading join table associates several tags with each researcher, and a partial unique index permits at most one primary tag. The Network displays every stored tag on its person and uses the primary tag for its labelled region and colour; membership never creates or strengthens a shared-expertise edge.
+
 ### `orcid_works`
 
 Mock publications are stored separately so one researcher can have multiple works and a future ORCID adapter can populate the same internal shape. Each row stores its researcher ID, title, work type, publication date, optional external identifier and URL, and data source. The current fixture always uses `mock` and supplies no external links.
@@ -184,7 +188,7 @@ Software: Python, TEMPO2.
 Biography: ...
 ```
 
-The same structured fields also produce the controlled expertise vocabulary sent to the search client. Names and biography prose are not vocabulary entries.
+The same structured expertise fields also produce the controlled expertise vocabulary sent to the search client. Names, biography prose, and research-group names are not vocabulary entries. Group names remain available to raw lexical retrieval without allowing AI expansion to treat affiliation as expertise.
 
 Publication titles are not added to the controlled vocabulary or the stored search document. They are scored separately as capped, low-weight evidence.
 
@@ -197,6 +201,8 @@ The repository contains:
 ```text
 data/researchers.json
 data/orcid-records.json
+data/research-groups.json
+data/research-group-memberships.json
 ```
 
 Use approximately 25–40 fictional researchers with overlapping expertise. The ORCID fixture gives each of the 30 current people one clearly non-production mock iD and three fictional recent papers.

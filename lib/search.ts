@@ -3,11 +3,13 @@ import { orcidWorks, researchers } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import type {
   PublicationEvidencePayload,
+  ResearchGroupSummary,
   SearchEvidenceCategory,
   SearchEvidenceMatchPayload,
   SearchEvidenceOrigin,
 } from "@/lib/api-types";
 import { normalizeSearchText } from "@/lib/search-text";
+import { attachResearchGroups } from "@/lib/research-groups";
 
 export { normalizeSearchText } from "@/lib/search-text";
 
@@ -66,16 +68,23 @@ export interface SearchResult {
   name: string;
   title: string;
   role: string;
+  researchGroups: ResearchGroupSummary[];
   researchAreas: string[];
   reason: string;
   evidence: SearchEvidence;
 }
 
+type SearchableResearcher = Researcher & {
+  researchGroups?: ResearchGroupSummary[];
+};
+
 interface RankedResearcher {
-  researcher: Researcher;
+  researcher: SearchableResearcher;
   score: number;
   matchedFieldCount: number;
   matchedEvidence: string[];
+  matchedResearchGroups: string[];
+  exactResearchGroupMatch: boolean;
   matchedPublications: OrcidWork[];
   rawProfileScore: number;
   publicationScore: number;
@@ -189,7 +198,7 @@ function getBiographyExcerpts(
 }
 
 function rankResearcher(
-  researcher: Researcher,
+  researcher: SearchableResearcher,
   normalizedQuery: string,
   tokens: string[],
   origin: SearchEvidenceOrigin,
@@ -199,8 +208,10 @@ function rankResearcher(
   const matchedFields = new Set<string>();
   const matchedEvidence = new Map<string, string>();
   const matchingEvidence = new Map<string, MutableEvidenceMatch>();
+  const matchedResearchGroups = new Map<string, string>();
   const normalizedName = normalizeSearchText(researcher.name);
   const exactNameMatch = normalizedName === normalizedQuery;
+  let exactResearchGroupMatch = false;
   let nameMatched = false;
 
   if (exactNameMatch) {
@@ -229,6 +240,41 @@ function rankResearcher(
       origin,
       matchedTerm,
     );
+  }
+
+  if (origin === "query") {
+    for (const group of researcher.researchGroups ?? []) {
+      const normalizedGroupName = normalizeSearchText(group.name);
+      let groupMatched = false;
+
+      if (normalizedGroupName === normalizedQuery) {
+        score += 80;
+        groupMatched = true;
+        exactResearchGroupMatch = true;
+      } else if (normalizedGroupName.includes(normalizedQuery)) {
+        score += 50;
+        groupMatched = true;
+      }
+
+      for (const token of tokens) {
+        if (normalizedGroupName.includes(token)) {
+          score += 8;
+          groupMatched = true;
+        }
+      }
+
+      if (groupMatched) {
+        matchedFields.add("research groups");
+        matchedResearchGroups.set(normalizedGroupName, group.name);
+        addEvidenceMatch(
+          matchingEvidence,
+          "researchGroup",
+          group.name,
+          origin,
+          matchedTerm,
+        );
+      }
+    }
   }
 
   const structuredFields: Array<
@@ -345,6 +391,8 @@ function rankResearcher(
     score,
     matchedFieldCount: matchedFields.size,
     matchedEvidence: [...matchedEvidence.values()],
+    matchedResearchGroups: [...matchedResearchGroups.values()],
+    exactResearchGroupMatch,
     matchedPublications: [],
     rawProfileScore: score,
     publicationScore: 0,
@@ -410,6 +458,13 @@ function buildReason(ranked: RankedResearcher): string {
   }
 
   if (
+    ranked.exactResearchGroupMatch &&
+    ranked.matchedResearchGroups.length > 0
+  ) {
+    return `They are listed in the ${ranked.matchedResearchGroups[0]} research group, matching your search.`;
+  }
+
+  if (
     ranked.matchedPublications.length > 0 &&
     ranked.publicationScore >= ranked.rawProfileScore
   ) {
@@ -420,6 +475,10 @@ function buildReason(ranked: RankedResearcher): string {
     return `Their stored profile includes ${formatEvidence(
       ranked.matchedEvidence.slice(0, 2),
     )}, matching your search.`;
+  }
+
+  if (ranked.matchedResearchGroups.length > 0) {
+    return `They are listed in the ${ranked.matchedResearchGroups[0]} research group, matching your search.`;
   }
 
   return "Their stored profile contains terms that match your search.";
@@ -437,7 +496,7 @@ function getVocabularyValues(researcher: Researcher): string[] {
   ];
 }
 
-export function buildExpertiseVocabulary(records: Researcher[]): string[] {
+export function buildExpertiseVocabulary(records: SearchableResearcher[]): string[] {
   const valuesByNormalizedTerm = new Map<string, string>();
 
   for (const researcher of records) {
@@ -457,7 +516,7 @@ export function buildExpertiseVocabulary(records: Researcher[]): string[] {
 }
 
 export function validateInterpretedTerms(
-  records: Researcher[],
+  records: SearchableResearcher[],
   terms: string[],
 ): string[] {
   const vocabulary = new Map(
@@ -478,7 +537,7 @@ export function validateInterpretedTerms(
 }
 
 export function rankResearchers(
-  records: Researcher[],
+  records: SearchableResearcher[],
   query: string,
   interpretedTerms: string[] = [],
   publications: OrcidWork[] = [],
@@ -568,6 +627,8 @@ export function rankResearchers(
           expandedFieldCount +
           Number(publicationRank.matches.length > 0),
         matchedEvidence: [...matchedEvidence.values()],
+        matchedResearchGroups: rawRank.matchedResearchGroups,
+        exactResearchGroupMatch: rawRank.exactResearchGroupMatch,
         matchedPublications: publicationRank.matches,
         publicationScore: publicationRank.score,
         matchingEvidence: mergeEvidenceMatches(
@@ -591,6 +652,7 @@ export function rankResearchers(
       name: ranked.researcher.name,
       title: ranked.researcher.title,
       role: ranked.researcher.role,
+      researchGroups: ranked.researcher.researchGroups ?? [],
       researchAreas: ranked.researcher.researchAreas,
       reason: buildReason(ranked),
       evidence: {
@@ -624,7 +686,7 @@ export function searchResearchersWithContext(
   interpretedTerms: string[] = [],
 ): { results: SearchResult[]; validInterpretedTerms: string[] } {
   const db = getDatabase();
-  const records = db.select().from(researchers).all();
+  const records = attachResearchGroups(db.select().from(researchers).all());
   const publications = db.select().from(orcidWorks).all();
   const validInterpretedTerms = validateInterpretedTerms(
     records,

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Researcher } from "@/db/schema";
 import seededResearchers from "@/data/researchers.json";
+import seededMemberships from "@/data/research-group-memberships.json";
+import seededResearchGroups from "@/data/research-groups.json";
 import { buildPeopleGraph } from "@/lib/people-graph";
 
 function researcher(
@@ -41,10 +43,17 @@ describe("people graph derivation", () => {
       orcidIdStatus: null,
       searchDocument: "",
       embedding: null,
+      researchGroups: seededMemberships
+        .filter(({ researcherId }) => researcherId === person.id)
+        .map(({ researchGroupId, isPrimary }) => ({
+          ...seededResearchGroups.find(({ id }) => id === researchGroupId)!,
+          isPrimary,
+        })),
     }));
 
-    const graph = buildPeopleGraph(researchers);
+    const graph = buildPeopleGraph(researchers, seededResearchGroups);
 
+    expect(graph.groups).toHaveLength(6);
     expect(graph.nodes).toHaveLength(30);
     expect(graph.edges).toHaveLength(42);
     expect(graph.nodes.map((node) => node.name)).toEqual(
@@ -52,7 +61,14 @@ describe("people graph derivation", () => {
         left.localeCompare(right, "en"),
       ),
     );
-    expect(buildPeopleGraph([...researchers].reverse())).toEqual(graph);
+    expect(
+      buildPeopleGraph([...researchers].reverse(), [...seededResearchGroups].reverse()),
+    ).toEqual(graph);
+    expect(graph.nodes[0].researchGroups).toHaveLength(1);
+    expect(
+      graph.nodes.find(({ id }) => id === "researcher_003")?.researchGroups,
+    ).toHaveLength(2);
+    expect(graph.nodes[0].primaryResearchGroupId).toBeTruthy();
     expect(new Set(graph.edges.map((edge) => edge.id))).toHaveLength(
       graph.edges.length,
     );
@@ -121,5 +137,34 @@ describe("people graph derivation", () => {
 
     expect(graph.nodes).toHaveLength(3);
     expect(graph.edges).toEqual([]);
+  });
+
+  it("retains primary and secondary research-group tags", () => {
+    const groupedResearcher = {
+      ...researcher("one", "One Person"),
+      researchGroups: [
+        { id: "alpha", name: "Alpha Group", isPrimary: true },
+        { id: "beta", name: "Beta Group", isPrimary: false },
+      ],
+    };
+    const graph = buildPeopleGraph(
+      [groupedResearcher, researcher("two", "Two Person")],
+      [
+        { id: "beta", name: "Beta Group" },
+        { id: "alpha", name: "Alpha Group" },
+      ],
+    );
+
+    expect(graph.groups.map(({ name }) => name)).toEqual([
+      "Alpha Group",
+      "Beta Group",
+    ]);
+    expect(graph.nodes.find(({ id }) => id === "one")).toMatchObject({
+      primaryResearchGroupId: "alpha",
+      researchGroups: groupedResearcher.researchGroups,
+    });
+    expect(
+      graph.nodes.find(({ id }) => id === "two")?.primaryResearchGroupId,
+    ).toBeUndefined();
   });
 });

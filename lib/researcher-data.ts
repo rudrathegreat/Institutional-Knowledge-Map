@@ -7,6 +7,7 @@ export type MockResearcher = Omit<
 
 export function buildSearchDocument(
   researcher: MockResearcher,
+  researchGroupNames: string[] = [],
 ): string {
   return [
     `${researcher.name}.`,
@@ -17,6 +18,7 @@ export function buildSearchDocument(
     `Instruments: ${researcher.instruments.join(", ")}.`,
     `Software: ${researcher.software.join(", ")}.`,
     `Keywords: ${researcher.keywords.join(", ")}.`,
+    `Research groups: ${researchGroupNames.join(", ")}.`,
     `Biography: ${researcher.biography}`,
   ].join(" ");
 }

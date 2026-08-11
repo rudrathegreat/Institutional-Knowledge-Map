@@ -28,6 +28,7 @@ const CATEGORY_LABELS: Record<SearchEvidenceCategory, string> = {
   name: "Name",
   title: "Title",
   role: "Role",
+  researchGroup: "Research groups",
   researchArea: "Research areas",
   method: "Methods",
   instrument: "Instruments",
@@ -157,6 +158,7 @@ export function SearchResult({
   displayedPosition,
   rankingMode,
 }: SearchResultProps) {
+  const researchGroups = result.researchGroups ?? [];
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const [recommendationFeedback, setRecommendationFeedback] =
     useState<RecommendationFeedbackValue | null>(null);
@@ -252,6 +254,17 @@ export function SearchResult({
           {result.role}
         </p>
       </header>
+
+      <p className="resultResearchGroups" aria-label="Research groups">
+        <span>
+          {researchGroups.length === 1
+            ? "Research group"
+            : "Research groups"}
+        </span>
+        {researchGroups.length > 0
+          ? researchGroups.map(({ name }) => name).join(" · ")
+          : "No research group listed"}
+      </p>
 
       <p className="expertise" aria-label="Research areas">
         {result.researchAreas.join(" · ")}

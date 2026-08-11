@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const researchers = sqliteTable("researchers", {
   id: text("id").primaryKey(),
@@ -30,6 +37,33 @@ export const researchers = sqliteTable("researchers", {
   searchDocument: text("search_document").notNull(),
   embedding: text("embedding_json", { mode: "json" }).$type<number[] | null>(),
 });
+
+export const researchGroups = sqliteTable("research_groups", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+});
+
+export const researcherGroupMemberships = sqliteTable(
+  "researcher_group_memberships",
+  {
+    researcherId: text("researcher_id")
+      .notNull()
+      .references(() => researchers.id, { onDelete: "cascade" }),
+    researchGroupId: text("research_group_id")
+      .notNull()
+      .references(() => researchGroups.id, { onDelete: "cascade" }),
+    isPrimary: integer("is_primary", { mode: "boolean" })
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    primaryKey({ columns: [table.researcherId, table.researchGroupId] }),
+    index("researcher_group_memberships_group_idx").on(table.researchGroupId),
+    uniqueIndex("researcher_group_memberships_primary_idx")
+      .on(table.researcherId)
+      .where(sql`${table.isPrimary} = 1`),
+  ],
+);
 
 export const orcidWorks = sqliteTable(
   "orcid_works",
@@ -90,6 +124,12 @@ export const recommendationFeedback = sqliteTable(
 
 export type Researcher = typeof researchers.$inferSelect;
 export type NewResearcher = typeof researchers.$inferInsert;
+export type ResearchGroup = typeof researchGroups.$inferSelect;
+export type NewResearchGroup = typeof researchGroups.$inferInsert;
+export type ResearcherGroupMembership =
+  typeof researcherGroupMemberships.$inferSelect;
+export type NewResearcherGroupMembership =
+  typeof researcherGroupMemberships.$inferInsert;
 export type OrcidWork = typeof orcidWorks.$inferSelect;
 export type NewOrcidWork = typeof orcidWorks.$inferInsert;
 export type RecommendationFeedback = typeof recommendationFeedback.$inferSelect;

@@ -45,7 +45,7 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Controlled, database-derived expertise vocabulary
 - Browser-side Puter query interpretation using an explicit Google Gemini model
 - Weighted query expansion (`raw lexical score + 0.35 × expanded-term score`)
-- Search across names, roles, biographies, research areas, methods, instruments, software, keywords, and low-weight recent-publication titles
+- Search across names, research-group affiliations, roles, biographies, research areas, methods, instruments, software, keywords, and low-weight recent-publication titles
 - Candidate-constrained Puter re-ranking using curated expertise as primary evidence and recent publications as supporting evidence
 - A query-specific `Suggested first contact` marker after successful AI re-ranking, with deterministic ordering and reasons as the fallback
 - Copyable, professional `Suggested question to ask` guidance on the final top three AI-ranked results
@@ -56,7 +56,7 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Alphabetical directory of every stored researcher
 - Stable, human-readable profile URLs with detailed expertise information
 - Clearly labelled mock ORCID iDs and three newest-first fictional publications on every profile
-- Interactive people network derived deterministically from shared profile fields
+- Interactive people network grouped by each person's primary research-group tag, with all tags visible and connections derived deterministically from shared profile fields
 - Name-based graph navigation, connection evidence, and profile links
 - Loading, validation, error, and empty-result states
 - Repository-controlled fictional seed data with 30 detailed biographies and 90 ORCID-style publication records

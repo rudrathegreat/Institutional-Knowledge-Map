@@ -12,6 +12,13 @@ const result: SearchResultPayload = {
   name: "Daniel Brooks",
   title: "Research Fellow",
   role: "Radio Astronomer",
+  researchGroups: [
+    {
+      id: "radio-group",
+      name: "Radio Astronomy & Pulsars",
+      isPrimary: true,
+    },
+  ],
   researchAreas: ["pulsars", "radio astronomy"],
   reason: "Their stored profile includes MeerKAT, matching your search.",
   suggestedQuestion:
@@ -63,6 +70,7 @@ describe("SearchResult evidence disclosure", () => {
     );
 
     expect(screen.getByText(result.reason)).toBeVisible();
+    expect(screen.getByText("Radio Astronomy & Pulsars")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Suggested question to ask" }),
     ).toBeVisible();

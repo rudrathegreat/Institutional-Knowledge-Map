@@ -43,6 +43,13 @@ describe("people directory and profiles", () => {
     expect(people).toHaveLength(30);
     expect(names).toEqual([...names].sort());
     expect(getPersonBySlug("maya-chen")?.id).toBe("researcher_001");
+    expect(getPersonBySlug("maya-chen")?.researchGroups).toEqual([
+      {
+        id: "group_radio_pulsars",
+        name: "Radio Astronomy & Pulsars",
+        isPrimary: true,
+      },
+    ]);
 
     render(<PeoplePage />);
 
@@ -68,6 +75,11 @@ describe("people directory and profiles", () => {
     expect(screen.getByText("Murriyang")).toBeInTheDocument();
     expect(screen.getByText("TEMPO2")).toBeInTheDocument();
     expect(screen.getByText("compact objects")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Research groups" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Radio Astronomy & Pulsars")).toBeInTheDocument();
+    expect(screen.getByText("Primary")).toBeInTheDocument();
     expect(screen.getByText("Mock ORCID iD")).toBeInTheDocument();
     expect(screen.getByText("0000-0000-DEMO-0001").closest("a")).toBeNull();
     expect(

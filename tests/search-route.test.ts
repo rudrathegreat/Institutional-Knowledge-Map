@@ -83,6 +83,13 @@ describe("POST /api/search", () => {
       id: "researcher_001",
       slug: "maya-chen",
       name: "Maya Chen",
+      researchGroups: [
+        {
+          id: "group_radio_pulsars",
+          name: "Radio Astronomy & Pulsars",
+          isPrimary: true,
+        },
+      ],
     });
     expect(payload.results[0].recommendationId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
@@ -104,6 +111,29 @@ describe("POST /api/search", () => {
         }),
       ]),
     });
+  });
+
+  it("returns members for a raw research-group query", async () => {
+    const response = await POST(
+      requestWithBody(
+        JSON.stringify({ query: "Radio Astronomy & Pulsars" }),
+      ),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.results).toHaveLength(5);
+    expect(
+      payload.results.every(
+        (result: { researchGroups: Array<{ id: string }> }) =>
+          result.researchGroups.some(({ id }) => id === "group_radio_pulsars"),
+      ),
+    ).toBe(true);
+    expect(payload.results[0].evidence.matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ category: "researchGroup" }),
+      ]),
+    );
   });
 
   it("retrieves a researcher using publication-title evidence", async () => {

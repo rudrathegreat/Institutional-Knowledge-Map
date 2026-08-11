@@ -472,6 +472,7 @@ Keep the same compact Search, People, and Network links on mobile; no separate m
 Keep the network quiet and functional rather than decorative:
 
 - use equal-sized person nodes so size does not imply seniority or influence;
+- show research groups as readable tags on person nodes, supported by a text legend so affiliation is never colour-only;
 - use restrained edge widths to indicate relative shared-expertise strength;
 - highlight only the selected person or edge and its immediate neighbourhood;
 - pair the canvas with a compact evidence inspector and name-based navigation;
