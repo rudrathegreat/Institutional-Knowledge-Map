@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,11 +7,20 @@ import { SearchExperience } from "@/components/SearchExperience";
 const puterAiMocks = vi.hoisted(() => ({
   interpretQuery: vi.fn(),
   explainCandidates: vi.fn(),
+  getAuthenticatedPuterChatClient: vi.fn(),
+  preloadPuterAi: vi.fn(),
 }));
 
-vi.mock("@/lib/puter-ai", () => puterAiMocks);
+vi.mock("@/lib/puter-ai", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/puter-ai")>()),
+  ...puterAiMocks,
+}));
 
 beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  puterAiMocks.getAuthenticatedPuterChatClient.mockResolvedValue({
+    chat: vi.fn(),
+  });
   puterAiMocks.interpretQuery.mockRejectedValue(new Error("sign-in cancelled"));
   puterAiMocks.explainCandidates.mockImplementation(
     async (_query, candidates) => candidates,
@@ -20,6 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -32,6 +42,177 @@ describe("SearchExperience", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Search for expertise")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Search" })).toBeEnabled();
+  });
+
+  it("announces authorization separately from model interpretation", async () => {
+    const user = userEvent.setup();
+    let finishAuthorization: ((client: { chat: ReturnType<typeof vi.fn> }) => void) | undefined;
+    puterAiMocks.getAuthenticatedPuterChatClient.mockReturnValue(
+      new Promise((resolve) => {
+        finishAuthorization = resolve;
+      }),
+    );
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "ready",
+      interpretation: "Finding pulsar expertise.",
+      interpretedTopics: ["Pulsars"],
+      searchTerms: ["pulsars"],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ interpretedTopics: [], results: [] }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars"]} />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "pulsar work{enter}",
+    );
+
+    expect(
+      await screen.findByText("Connecting to Puter for AI assistance…"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
+
+    await act(async () => {
+      finishAuthorization?.({ chat: vi.fn() });
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "No strong matches found." }),
+    ).toBeInTheDocument();
+  });
+
+  it("retries the same search with AI after a recoverable failure", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ interpretedTopics: [], results: [] }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars"]} />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "pulsar work{enter}",
+    );
+    const retryButton = await screen.findByRole("button", {
+      name: "Retry with AI",
+    });
+
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "ready",
+      interpretation: "Finding pulsar specialists.",
+      interpretedTopics: ["Pulsars"],
+      searchTerms: ["pulsars"],
+    });
+    await user.click(retryButton);
+
+    expect(
+      await screen.findByText("Finding pulsar specialists."),
+    ).toBeInTheDocument();
+    expect(puterAiMocks.interpretQuery).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows authentication transport guidance and logs only safe diagnostics", async () => {
+    const user = userEvent.setup();
+    const sensitiveCause = {
+      status: 0,
+      code: "network_error",
+      requestBody: "private expertise query",
+      authorization: "Bearer private-token",
+    };
+    puterAiMocks.getAuthenticatedPuterChatClient.mockRejectedValue(sensitiveCause);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ interpretedTopics: [], results: [] }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars"]} />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "private expertise query{enter}",
+    );
+
+    expect(
+      await screen.findByText(/Puter sign-in could not connect/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Retry with AI" }),
+    ).toBeInTheDocument();
+
+    const warning = vi.mocked(console.warn).mock.calls.at(-1);
+    expect(warning?.[0]).toContain("authentication failed (network_error)");
+    expect(warning?.[1]).toMatchObject({
+      stage: "authentication",
+      transport: "authentication",
+      status: 0,
+      sdkCode: "network_error",
+    });
+    expect(JSON.stringify(warning)).not.toContain("private expertise query");
+    expect(JSON.stringify(warning)).not.toContain("private-token");
+  });
+
+  it("ignores an AI response from a superseded search", async () => {
+    const user = userEvent.setup();
+    let finishFirstInterpretation:
+      | ((value: {
+          kind: "ready";
+          interpretation: string;
+          interpretedTopics: string[];
+          searchTerms: string[];
+        }) => void)
+      | undefined;
+    puterAiMocks.interpretQuery
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishFirstInterpretation = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        kind: "ready",
+        interpretation: "Second interpretation.",
+        interpretedTopics: ["ASKAP"],
+        searchTerms: ["ASKAP"],
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ interpretedTopics: [], results: [] }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars", "ASKAP"]} />);
+    const input = screen.getByLabelText("Search for expertise");
+    await user.type(input, "first query{enter}");
+    await screen.findByText("Interpreting your need…");
+
+    await user.clear(input);
+    await user.type(input, "second query");
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+
+    expect(await screen.findByText("Second interpretation.")).toBeInTheDocument();
+    await act(async () => {
+      finishFirstInterpretation?.({
+        kind: "ready",
+        interpretation: "Stale first interpretation.",
+        interpretedTopics: ["Pulsars"],
+        searchTerms: ["pulsars"],
+      });
+    });
+
+    expect(screen.queryByText("Stale first interpretation.")).not.toBeInTheDocument();
+    expect(screen.getByText("Second interpretation.")).toBeInTheDocument();
   });
 
   it("rejects an empty query through pointer submission", async () => {
@@ -92,8 +273,9 @@ describe("SearchExperience", () => {
     expect(
       screen.getByText("Why this person may be relevant"),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Puter sign-in was cancelled/)).toBeInTheDocument();
     expect(
-      screen.getByText(/AI interpretation was unavailable/),
+      screen.getByRole("button", { name: "Retry with AI" }),
     ).toBeInTheDocument();
   });
 
@@ -331,6 +513,7 @@ describe("SearchExperience", () => {
     expect(puterAiMocks.explainCandidates).toHaveBeenCalledWith(
       "Could instrument calibration have changed my pulsar brightness?",
       expect.any(Array),
+      expect.objectContaining({ chat: expect.any(Function) }),
     );
     expect(
       screen.getByText("Finding expertise in instrumental brightness changes."),
@@ -472,7 +655,9 @@ describe("SearchExperience", () => {
     expect(resultCards[1]).toHaveTextContent(
       "Their stored profile includes scintillation analysis.",
     );
-    expect(screen.getByText(/AI explanations were unavailable/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Puter AI allowance is unavailable/),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Suggested first contact")).not.toBeInTheDocument();
     expect(screen.queryByText("Suggested question to ask")).not.toBeInTheDocument();
   });

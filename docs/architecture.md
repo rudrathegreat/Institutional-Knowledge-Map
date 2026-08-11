@@ -71,6 +71,13 @@ Recommended stack:
 - Cytoscape.js for the route-scoped interactive network renderer
 - explicit `google/gemini-3.1-flash-lite` model selection
 
+The browser adapter sets `__IKM_DISABLE_PUTER_FS_SOCKET__` before importing the
+pinned Puter 2.6.0 package. A reproducible dependency patch uses that opt-out to
+skip Puter's filesystem cache-invalidation and upload-progress socket because
+this product uses only `puter.auth` and `puter.ai`. Remove the patch when Puter
+provides an official lazy-module or filesystem-socket option; revisit the opt-out
+before introducing any `puter.fs` feature.
+
 Do not create a separate backend application.
 
 Do not create a Python service.

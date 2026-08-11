@@ -1,14 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import type { SearchResultPayload } from "@/lib/api-types";
 import {
   DEFAULT_PUTER_AI_MODEL,
   explainCandidates,
+  getAuthenticatedPuterChatClient,
+  getPuterAiFailureNotice,
   getPuterAiModel,
   interpretQuery,
+  isPuterAiRetryable,
   MAX_SUGGESTED_QUESTION_LENGTH,
   mergeExplanationResponse,
+  normalizePuterAiError,
   parseInterpretationResponse,
+  PuterAiUnavailableError,
   PUTER_AI_TIMEOUT_MS,
 } from "@/lib/puter-ai";
 
@@ -269,16 +276,31 @@ describe("Puter query interpretation", () => {
   it.each([
     [{ message: { content: "not json" } }],
     [{ message: { content: "Here is JSON: {\"interpretation\":\"x\"}" } }],
-    [
-      {
-        message: {
-          content:
-            '{"interpretation":"x","interpretedTopics":[],"searchTerms":[],"extra":true}',
-        },
-      },
-    ],
   ])("rejects malformed or non-JSON model output", (response) => {
     expect(() => parseInterpretationResponse(response, vocabulary)).toThrow();
+  });
+
+  it("accepts the legacy ready shape and ignores unused response fields", () => {
+    expect(
+      parseInterpretationResponse(
+        {
+          message: {
+            content: JSON.stringify({
+              interpretation: "Finding ASKAP expertise.",
+              interpretedTopics: ["Radio instruments"],
+              searchTerms: ["ASKAP"],
+              unusedProviderField: true,
+            }),
+          },
+        },
+        vocabulary,
+      ),
+    ).toEqual({
+      kind: "ready",
+      interpretation: "Finding ASKAP expertise.",
+      interpretedTopics: ["Radio instruments"],
+      searchTerms: ["ASKAP"],
+    });
   });
 
   it("always calls Puter with the explicit non-OpenAI model and temperature zero", async () => {
@@ -325,14 +347,134 @@ describe("Puter query interpretation", () => {
     expect(client.chat).not.toHaveBeenCalled();
   });
 
-  it("propagates authentication, quota, model, or timeout failures for fallback", async () => {
+  it("classifies quota failures for an actionable fallback", async () => {
     const client = {
       chat: vi.fn().mockRejectedValue(new Error("quota exhausted")),
     };
 
-    await expect(
-      interpretQuery("find expertise", vocabulary, client),
-    ).rejects.toThrow("quota exhausted");
+    const rejection = interpretQuery("find expertise", vocabulary, client);
+
+    await expect(rejection).rejects.toMatchObject({ code: "quota_exhausted" });
+    await expect(rejection).rejects.toThrow(
+      "The Puter AI allowance is unavailable.",
+    );
+  });
+
+  it("does not apply the model timeout while first-time authentication is open", async () => {
+    vi.useFakeTimers();
+    let signedIn = false;
+    const chat = vi.fn();
+    const client = {
+      ai: { chat },
+      auth: {
+        isSignedIn: vi.fn(() => signedIn),
+        signIn: vi.fn(
+          () =>
+            new Promise<void>((resolve) => {
+              setTimeout(() => {
+                signedIn = true;
+                resolve();
+              }, 20_000);
+            }),
+        ),
+      },
+    };
+
+    const authorization = getAuthenticatedPuterChatClient(client);
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(chat).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await expect(authorization).resolves.toBe(client.ai);
+    expect(client.auth.signIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses an authenticated Puter client without another sign-in", async () => {
+    const client = {
+      ai: { chat: vi.fn() },
+      auth: {
+        isSignedIn: vi.fn(() => true),
+        signIn: vi.fn(),
+      },
+    };
+
+    await expect(getAuthenticatedPuterChatClient(client)).resolves.toBe(client.ai);
+    expect(client.auth.signIn).not.toHaveBeenCalled();
+  });
+
+  it("keeps SDK loading failures non-retryable", () => {
+    const error = new PuterAiUnavailableError("Puter AI could not be loaded.");
+
+    expect(error).toMatchObject({ code: "sdk_unavailable" });
+    expect(getPuterAiFailureNotice(error)).toContain("could not be loaded");
+    expect(isPuterAiRetryable(error)).toBe(false);
+  });
+
+  it.each([
+    [{ error: "popup_blocked" }, "popup_blocked"],
+    [{ error: "auth_window_closed" }, "authentication_cancelled"],
+    [new Error("quota exhausted"), "quota_exhausted"],
+    [new Error("model not found"), "model_unavailable"],
+    [new Error("Failed to fetch"), "network_error"],
+    [new SyntaxError("bad JSON"), "invalid_response"],
+  ] as const)("normalizes common Puter failures", (error, code) => {
+    const normalized = normalizePuterAiError(error, "interpretation");
+
+    expect(normalized.code).toBe(code);
+    expect(getPuterAiFailureNotice(normalized)).toBeTruthy();
+    expect(normalized.originalCause).toBe(error);
+  });
+
+  it.each([
+    [{ status: 0 }, "authentication"],
+    [{ xhr: { status: 0 } }, "interpretation"],
+    [new Error("net::ERR_CONNECTION_RESET"), "explanation"],
+  ] as const)(
+    "normalizes status-zero and reset failures without exposing request data",
+    (error, stage) => {
+      const normalized = normalizePuterAiError(error, stage);
+
+      expect(normalized.code).toBe("network_error");
+      expect(normalized.diagnostic).toMatchObject({
+        stage,
+        transport: stage === "authentication" ? "authentication" : "driver_http",
+      });
+    },
+  );
+
+  it("keeps transport diagnostics small and safe", () => {
+    const error = {
+      status: 0,
+      code: "network_error",
+      requestBody: "private researcher query",
+      authorization: "Bearer private-token",
+    };
+    const normalized = normalizePuterAiError(error, "interpretation");
+    const serializedDiagnostic = JSON.stringify(normalized.diagnostic);
+
+    expect(normalized.diagnostic).toMatchObject({
+      stage: "interpretation",
+      transport: "driver_http",
+      status: 0,
+      sdkCode: "network_error",
+    });
+    expect(serializedDiagnostic).not.toContain("private researcher query");
+    expect(serializedDiagnostic).not.toContain("private-token");
+    expect(normalized.originalCause).toBe(error);
+  });
+
+  it("tailors network recovery guidance to the failing stage", () => {
+    const authFailure = normalizePuterAiError({ status: 0 }, "authentication");
+    const driverFailure = normalizePuterAiError({ status: 0 }, "interpretation");
+
+    expect(getPuterAiFailureNotice(authFailure)).toContain(
+      "Puter sign-in could not connect",
+    );
+    expect(getPuterAiFailureNotice(authFailure)).toContain("api.puter.com");
+    expect(getPuterAiFailureNotice(driverFailure)).toContain(
+      "Puter AI could not connect",
+    );
+    expect(getPuterAiFailureNotice(driverFailure)).toContain("api.puter.com");
   });
 
   it("times out an unresponsive Puter call so lexical fallback can continue", async () => {
@@ -587,5 +729,62 @@ describe("Puter explanation merging", () => {
         },
       }),
     ).toThrow();
+  });
+});
+
+describe("Puter SDK compatibility patch", () => {
+  it("forwards an explicit zero temperature into the driver request", () => {
+    const chatSource = readFileSync(
+      resolve(
+        process.cwd(),
+        "node_modules/@heyputer/puter.js/src/modules/ai/chat.js",
+      ),
+      "utf8",
+    );
+
+    expect(chatSource).toMatch(
+      /if \(userParams\.temperature !== undefined\) \{\s*requestParams\.temperature = userParams\.temperature;/,
+    );
+    expect(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "patches/@heyputer+puter.js+2.6.0.patch",
+        ),
+        "utf8",
+      ),
+    ).toContain("if (userParams.temperature !== undefined)");
+  });
+
+  it("sets the AI-only socket opt-out before importing the SDK", () => {
+    const adapterSource = readFileSync(
+      resolve(process.cwd(), "lib/puter-ai.ts"),
+      "utf8",
+    );
+
+    expect(adapterSource).toMatch(
+      /configurePuterForAiOnly\(\);\s*puterClientPromise = import\("@heyputer\/puter\.js"\)/,
+    );
+  });
+
+  it("guards the filesystem socket and auth reconnect listener", () => {
+    const filesystemSource = readFileSync(
+      resolve(
+        process.cwd(),
+        "node_modules/@heyputer/puter.js/src/modules/FileSystem/index.js",
+      ),
+      "utf8",
+    );
+    const patchSource = readFileSync(
+      resolve(process.cwd(), "patches/@heyputer+puter.js+2.6.0.patch"),
+      "utf8",
+    );
+
+    for (const source of [filesystemSource, patchSource]) {
+      expect(source).toContain("__IKM_DISABLE_PUTER_FS_SOCKET__");
+      expect(source).toMatch(
+        /if \( ! globalThis\.__IKM_DISABLE_PUTER_FS_SOCKET__ \) \{[\s\S]*this\.initializeSocket\(\);[\s\S]*puter\.onAuthStateChanged/,
+      );
+    }
   });
 });

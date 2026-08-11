@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { SearchResult } from "@/components/SearchResult";
 import type {
@@ -9,20 +9,28 @@ import type {
   SearchResponsePayload,
   SearchResultPayload,
 } from "@/lib/api-types";
-import { explainCandidates, interpretQuery } from "@/lib/puter-ai";
+import {
+  explainCandidates,
+  getAuthenticatedPuterChatClient,
+  getPuterAiFailureNotice,
+  interpretQuery,
+  isPuterAiRetryable,
+  normalizePuterAiError,
+  preloadPuterAi,
+} from "@/lib/puter-ai";
 import type {
+  PuterAiError,
+  PuterChatClient,
   SearchRefinement,
   SearchRefinementOption,
 } from "@/lib/puter-ai";
 
 const MAX_QUERY_LENGTH = 2_000;
-const INTERPRETATION_UNAVAILABLE_NOTICE =
-  "AI interpretation was unavailable, so these results use directory keywords.";
-const EXPLANATION_UNAVAILABLE_NOTICE =
-  "AI explanations were unavailable, so the match reasons use directory evidence.";
 
 type SearchState =
   | "idle"
+  | "authorizing"
+  | "interpreting"
   | "loading"
   | "refinement"
   | "results"
@@ -31,6 +39,11 @@ type SearchState =
 
 interface SearchExperienceProps {
   expertiseVocabulary?: string[];
+}
+
+interface AiNotice {
+  message: string;
+  retryable: boolean;
 }
 
 export function SearchExperience({
@@ -42,18 +55,25 @@ export function SearchExperience({
   const [message, setMessage] = useState("");
   const [interpretation, setInterpretation] = useState("");
   const [interpretedTopics, setInterpretedTopics] = useState<string[]>([]);
-  const [aiNotice, setAiNotice] = useState("");
+  const [aiNotice, setAiNotice] = useState<AiNotice | null>(null);
   const [refinement, setRefinement] = useState<SearchRefinement | null>(null);
   const [pendingRefinement, setPendingRefinement] =
     useState<SearchRefinementOption | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
 
   const hasSearched = searchState !== "idle";
+  const isBusy = ["authorizing", "interpreting", "loading"].includes(
+    searchState,
+  );
   const rankingMode: RecommendationRankingMode = results.some(
     (result) => result.isSuggestedContact,
   )
     ? "ai"
     : "deterministic";
+
+  useEffect(() => {
+    preloadPuterAi();
+  }, []);
 
   function handleQueryChange(nextQuery: string) {
     setQuery(nextQuery);
@@ -62,7 +82,7 @@ export function SearchExperience({
       setRefinement(null);
       setPendingRefinement(null);
       setMessage("");
-      setAiNotice("");
+      setAiNotice(null);
       setSearchState("idle");
       return;
     }
@@ -79,22 +99,38 @@ export function SearchExperience({
     setQuery(option.refinedQuery);
     setPendingRefinement(option);
     setMessage("");
-    setAiNotice("");
+    setAiNotice(null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    activeRequest.current?.abort();
+  function recordAiFailure(
+    error: unknown,
+    stage: "authentication" | "interpretation" | "explanation",
+  ): PuterAiError {
+    const failure = normalizePuterAiError(error, stage);
 
-    const trimmedQuery = query.trim();
-    const selectedRefinement =
-      pendingRefinement?.refinedQuery.trim() === trimmedQuery
-        ? pendingRefinement
-        : null;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[Puter AI] ${failure.stage} failed (${failure.code}).`,
+        failure.diagnostic,
+      );
+    }
+
+    setAiNotice({
+      message: getPuterAiFailureNotice(failure),
+      retryable: isPuterAiRetryable(failure),
+    });
+    return failure;
+  }
+
+  async function runSearch(
+    trimmedQuery: string,
+    selectedRefinement: SearchRefinementOption | null,
+  ) {
+    activeRequest.current?.abort();
 
     setInterpretation("");
     setInterpretedTopics([]);
-    setAiNotice("");
+    setAiNotice(null);
     setRefinement(null);
 
     if (!selectedRefinement) {
@@ -117,27 +153,42 @@ export function SearchExperience({
 
     const controller = new AbortController();
     activeRequest.current = controller;
+    const requestIsInactive = () =>
+      controller.signal.aborted || activeRequest.current !== controller;
 
     setMessage("");
-    setSearchState("loading");
+    setSearchState("authorizing");
 
     try {
       let interpretedTerms: string[] = [];
       let aiInterpretationAvailable = false;
+      let chatClient: PuterChatClient | undefined;
+
+      try {
+        chatClient = await getAuthenticatedPuterChatClient();
+      } catch (error) {
+        if (requestIsInactive()) {
+          return;
+        }
+
+        recordAiFailure(error, "authentication");
+      }
 
       if (selectedRefinement) {
         interpretedTerms = selectedRefinement.searchTerms;
         aiInterpretationAvailable = true;
         setInterpretation(selectedRefinement.interpretation);
         setInterpretedTopics(selectedRefinement.interpretedTopics);
-      } else {
+      } else if (chatClient) {
         try {
+          setSearchState("interpreting");
           const interpretedQuery = await interpretQuery(
             trimmedQuery,
             expertiseVocabulary,
+            chatClient,
           );
 
-          if (controller.signal.aborted) {
+          if (requestIsInactive()) {
             return;
           }
 
@@ -152,15 +203,16 @@ export function SearchExperience({
           aiInterpretationAvailable = true;
           setInterpretation(interpretedQuery.interpretation);
           setInterpretedTopics(interpretedQuery.interpretedTopics);
-        } catch {
-          if (controller.signal.aborted) {
+        } catch (error) {
+          if (requestIsInactive()) {
             return;
           }
 
-          setAiNotice(INTERPRETATION_UNAVAILABLE_NOTICE);
+          recordAiFailure(error, "interpretation");
         }
       }
 
+      setSearchState("loading");
       const response = await fetch("/api/search", {
         method: "POST",
         headers: {
@@ -184,18 +236,27 @@ export function SearchExperience({
 
       let displayedResults = payload.results;
 
-      if (aiInterpretationAvailable && displayedResults.length > 0) {
+      if (
+        chatClient &&
+        aiInterpretationAvailable &&
+        displayedResults.length > 0
+      ) {
         try {
           displayedResults = await explainCandidates(
             trimmedQuery,
             displayedResults,
+            chatClient,
           );
-        } catch {
-          setAiNotice(EXPLANATION_UNAVAILABLE_NOTICE);
+        } catch (error) {
+          if (requestIsInactive()) {
+            return;
+          }
+
+          recordAiFailure(error, "explanation");
         }
       }
 
-      if (controller.signal.aborted) {
+      if (requestIsInactive()) {
         return;
       }
 
@@ -218,6 +279,28 @@ export function SearchExperience({
         activeRequest.current = null;
       }
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedQuery = query.trim();
+    const selectedRefinement =
+      pendingRefinement?.refinedQuery.trim() === trimmedQuery
+        ? pendingRefinement
+        : null;
+
+    void runSearch(trimmedQuery, selectedRefinement);
+  }
+
+  function retryWithAi() {
+    const trimmedQuery = query.trim();
+    const selectedRefinement =
+      pendingRefinement?.refinedQuery.trim() === trimmedQuery
+        ? pendingRefinement
+        : null;
+
+    void runSearch(trimmedQuery, selectedRefinement);
   }
 
   return (
@@ -250,7 +333,7 @@ export function SearchExperience({
               aria-invalid={searchState === "error"}
               maxLength={MAX_QUERY_LENGTH + 1}
             />
-            <button type="submit" disabled={searchState === "loading"}>
+            <button type="submit" disabled={isBusy}>
               Search
             </button>
           </div>
@@ -269,10 +352,24 @@ export function SearchExperience({
           role={searchState === "error" ? "alert" : "status"}
           aria-live="polite"
         >
+          {searchState === "authorizing" && (
+            <>
+              <span className="spinner" aria-hidden="true" />
+              Connecting to Puter for AI assistance…
+            </>
+          )}
+
+          {searchState === "interpreting" && (
+            <>
+              <span className="spinner" aria-hidden="true" />
+              Interpreting your need…
+            </>
+          )}
+
           {searchState === "loading" && (
             <>
               <span className="spinner" aria-hidden="true" />
-              Interpreting your need and searching…
+              Searching the directory…
             </>
           )}
 
@@ -330,9 +427,14 @@ export function SearchExperience({
         )}
 
         {aiNotice && searchState !== "error" && (
-          <p className="aiNotice" role="status">
-            {aiNotice}
-          </p>
+          <div className="aiNotice" role="status">
+            <p>{aiNotice.message}</p>
+            {aiNotice.retryable && !isBusy && (
+              <button type="button" onClick={retryWithAi}>
+                Retry with AI
+              </button>
+            )}
+          </div>
         )}
 
         {searchState === "empty" && (

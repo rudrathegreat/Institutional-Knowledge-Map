@@ -143,6 +143,7 @@ button:disabled {
 .siteBrand:focus-visible,
 .siteNavLink:focus-visible,
 .searchRefinementOption:focus-visible,
+.aiNotice button:focus-visible,
 .resultHeader a:focus-visible,
 .suggestedQuestion button:focus-visible,
 .recommendationFeedback button:focus-visible,
@@ -403,12 +404,35 @@ button:disabled {
 }
 
 .aiNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 14px 0 0;
   padding-left: 11px;
   color: var(--secondary-text);
   border-left: 2px solid #c9c9f2;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.aiNotice p {
+  margin: 0;
+}
+
+.aiNotice button {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--accent);
+  background: var(--background);
+  border: 1px solid #c9c9f2;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.aiNotice button:hover {
+  color: var(--accent-hover);
+  background: var(--accent-subtle);
 }
 
 .spinner {
