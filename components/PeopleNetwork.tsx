@@ -11,6 +11,15 @@ import {
   useState,
 } from "react";
 
+import { PeopleFilters } from "@/components/PeopleFilters";
+import {
+  derivePeopleFilterOptions,
+  EMPTY_PEOPLE_FILTERS,
+  hasActivePeopleFilters,
+  matchesPeopleFilters,
+  type PeopleFilterState,
+  updatePeopleFilterSearchParams,
+} from "@/lib/people-filters";
 import type {
   PeopleGraph,
   PeopleGraphEdge,
@@ -21,6 +30,7 @@ import type {
 
 interface PeopleNetworkProps {
   graph: PeopleGraph;
+  initialFilters?: PeopleFilterState;
 }
 
 type GraphStatus = "loading" | "ready" | "error";
@@ -93,6 +103,14 @@ function researchGroupNames(person: PeopleGraphNode): string[] {
   return (person.researchGroups ?? []).map(({ name }) => name);
 }
 
+function primaryResearchGroupId(person: PeopleGraphNode): string {
+  return (
+    person.primaryResearchGroupId ??
+    (person.researchGroups ?? []).find(({ isPrimary }) => isPrimary)?.id ??
+    UNASSIGNED_GROUP_ID
+  );
+}
+
 function graphElements(graph: PeopleGraph) {
   const groups = displayGroups(graph);
   const groupsById = new Map(groups.map((group) => [group.id, group]));
@@ -109,10 +127,7 @@ function graphElements(graph: PeopleGraph) {
     })),
     ...graph.nodes.map((node) => {
       const groupNames = researchGroupNames(node);
-      const primaryGroupId =
-        node.primaryResearchGroupId ??
-        (node.researchGroups ?? []).find(({ isPrimary }) => isPrimary)?.id ??
-        UNASSIGNED_GROUP_ID;
+      const primaryGroupId = primaryResearchGroupId(node);
       const palette =
         groupsById.get(primaryGroupId)?.palette ?? UNASSIGNED_PALETTE;
       const groupLabel = groupNames.join(" · ") || UNASSIGNED_GROUP_NAME;
@@ -209,7 +224,9 @@ function InitialInspector({
       </p>
 
       <details className="networkPeopleDirectory">
-        <summary>Browse all {nodes.length} people</summary>
+        <summary>
+          Browse all {nodes.length} {nodes.length === 1 ? "person" : "people"}
+        </summary>
         <ul>
           {nodes.map((node) => (
             <li key={node.id}>
@@ -339,21 +356,66 @@ function ConnectionInspector({
   );
 }
 
-export function PeopleNetwork({ graph }: PeopleNetworkProps) {
+export function PeopleNetwork({
+  graph,
+  initialFilters = EMPTY_PEOPLE_FILTERS,
+}: PeopleNetworkProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Core | null>(null);
   const [status, setStatus] = useState<GraphStatus>("loading");
   const [selection, setSelection] = useState<Selection>();
   const [searchValue, setSearchValue] = useState("");
   const [searchError, setSearchError] = useState("");
+  const [filters, setFilters] = useState(initialFilters);
   const groups = useMemo(() => displayGroups(graph), [graph]);
-  const peopleById = useMemo(
-    () => new Map(graph.nodes.map((node) => [node.id, node])),
+  const filterOptions = useMemo(
+    () => derivePeopleFilterOptions(graph.nodes),
     [graph.nodes],
   );
+  const visibleNodes = useMemo(
+    () => graph.nodes.filter((node) => matchesPeopleFilters(node, filters)),
+    [filters, graph.nodes],
+  );
+  const visibleNodeIds = useMemo(
+    () => new Set(visibleNodes.map(({ id }) => id)),
+    [visibleNodes],
+  );
+  const visibleEdges = useMemo(
+    () =>
+      graph.edges.filter(
+        (edge) =>
+          visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId),
+      ),
+    [graph.edges, visibleNodeIds],
+  );
+  const visibleEdgeIds = useMemo(
+    () => new Set(visibleEdges.map(({ id }) => id)),
+    [visibleEdges],
+  );
+  const visibleGraph = useMemo(
+    () => ({ ...graph, nodes: visibleNodes, edges: visibleEdges }),
+    [graph, visibleEdges, visibleNodes],
+  );
+  const visibleGroups = useMemo(
+    () =>
+      groups.filter((group) =>
+        group.id === UNASSIGNED_GROUP_ID
+          ? visibleNodes.some(
+              (node) => primaryResearchGroupId(node) === UNASSIGNED_GROUP_ID,
+            )
+          : visibleNodes.some((node) =>
+              (node.researchGroups ?? []).some(({ id }) => id === group.id),
+            ),
+      ),
+    [groups, visibleNodes],
+  );
+  const peopleById = useMemo(
+    () => new Map(visibleNodes.map((node) => [node.id, node])),
+    [visibleNodes],
+  );
   const edgesById = useMemo(
-    () => new Map(graph.edges.map((edge) => [edge.id, edge])),
-    [graph.edges],
+    () => new Map(visibleEdges.map((edge) => [edge.id, edge])),
+    [visibleEdges],
   );
 
   useEffect(() => {
@@ -433,6 +495,12 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
             selector: ".is-muted",
             style: {
               opacity: 0.16,
+            },
+          },
+          {
+            selector: ".is-filtered-out",
+            style: {
+              display: "none",
             },
           },
           {
@@ -522,6 +590,47 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
 
   useEffect(() => {
     const instance = graphRef.current;
+    if (!instance || status !== "ready") {
+      return;
+    }
+
+    for (const node of graph.nodes) {
+      const element = instance.getElementById(node.id);
+      if (visibleNodeIds.has(node.id)) {
+        element.removeClass("is-filtered-out");
+      } else {
+        element.addClass("is-filtered-out");
+      }
+    }
+
+    for (const edge of graph.edges) {
+      const element = instance.getElementById(edge.id);
+      if (visibleEdgeIds.has(edge.id)) {
+        element.removeClass("is-filtered-out");
+      } else {
+        element.addClass("is-filtered-out");
+      }
+    }
+
+    for (const group of groups) {
+      const hasVisiblePrimaryMember = visibleNodes.some(
+        (node) => primaryResearchGroupId(node) === group.id,
+      );
+      const element = instance.getElementById(groupElementId(group.id));
+      if (hasVisiblePrimaryMember) {
+        element.removeClass("is-filtered-out");
+      } else {
+        element.addClass("is-filtered-out");
+      }
+    }
+
+    if (visibleNodes.length > 0) {
+      instance.fit(instance.elements().not(".is-filtered-out"), GRAPH_PADDING);
+    }
+  }, [graph.edges, graph.nodes, groups, status, visibleEdgeIds, visibleNodeIds, visibleNodes]);
+
+  useEffect(() => {
+    const instance = graphRef.current;
     if (!instance) {
       return;
     }
@@ -582,7 +691,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = searchValue.trim().toLocaleLowerCase("en");
-    const match = graph.nodes.find(
+    const match = visibleNodes.find(
       (node) =>
         node.name.toLocaleLowerCase("en") === query ||
         node.name.toLocaleLowerCase("en").includes(query),
@@ -618,10 +727,46 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
   }
 
   function fitGraph() {
-    graphRef.current?.fit(undefined, GRAPH_PADDING);
+    const instance = graphRef.current;
+    if (instance && visibleNodes.length > 0) {
+      instance.fit(instance.elements().not(".is-filtered-out"), GRAPH_PADDING);
+    }
     setSelection(undefined);
     setSearchValue("");
     setSearchError("");
+  }
+
+  function updateFilters(nextFilters: PeopleFilterState) {
+    const nextVisibleNodeIds = new Set(
+      graph.nodes
+        .filter((node) => matchesPeopleFilters(node, nextFilters))
+        .map(({ id }) => id),
+    );
+    const selectionRemainsVisible =
+      !selection ||
+      (selection.kind === "node"
+        ? nextVisibleNodeIds.has(selection.id)
+        : graph.edges.some(
+            (edge) =>
+              edge.id === selection.id &&
+              nextVisibleNodeIds.has(edge.sourceId) &&
+              nextVisibleNodeIds.has(edge.targetId),
+          ));
+
+    if (!selectionRemainsVisible) {
+      setSelection(undefined);
+      setSearchValue("");
+      setSearchError("");
+    }
+
+    setFilters(nextFilters);
+    const searchParams = updatePeopleFilterSearchParams(
+      new URLSearchParams(window.location.search),
+      nextFilters,
+    );
+    const query = searchParams.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
   }
 
   if (graph.nodes.length === 0) {
@@ -650,10 +795,24 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
     ? `${selectedPerson.name} selected.`
     : selectedEdge && selectedSource && selectedTarget
       ? `Connection between ${selectedSource.name} and ${selectedTarget.name} selected.`
-      : "Full network shown.";
+      : hasActivePeopleFilters(filters)
+        ? `${visibleNodes.length} of ${graph.nodes.length} people shown.`
+        : "Full network shown.";
 
   return (
     <div className="networkExperience">
+      <PeopleFilters
+        filters={filters}
+        options={filterOptions}
+        onChange={updateFilters}
+      />
+
+      {hasActivePeopleFilters(filters) ? (
+        <p className="networkFilterCount" aria-live="polite">
+          {visibleNodes.length} of {graph.nodes.length} people shown
+        </p>
+      ) : null}
+
       <div className="networkToolbar">
         <form className="networkSearch" onSubmit={submitSearch}>
           <label htmlFor="network-person-search">Find a person</label>
@@ -672,7 +831,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
               }}
             />
             <datalist id="network-person-options">
-              {graph.nodes.map((node) => (
+              {visibleNodes.map((node) => (
                 <option key={node.id} value={node.name} />
               ))}
             </datalist>
@@ -688,7 +847,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
         <div className="networkGroupLegend" aria-label="Research group tags">
           <span>Research group tags</span>
           <ul>
-            {groups.map((group) => (
+            {visibleGroups.map((group) => (
               <li key={group.id}>
                 <span
                   aria-hidden="true"
@@ -742,7 +901,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
             className="networkCanvas"
             ref={containerRef}
             role="img"
-            aria-label={`Interactive network showing ${graph.nodes.length} people and ${graph.edges.length} shared-expertise connections. Use the Find a person control for keyboard navigation.`}
+            aria-label={`Interactive network showing ${visibleNodes.length} ${visibleNodes.length === 1 ? "person" : "people"} and ${visibleEdges.length} shared-expertise connections. Use the Find a person control for keyboard navigation.`}
           />
           {status === "loading" ? (
             <div className="networkCanvasState" role="status">
@@ -755,6 +914,18 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
               <p>Use Find a person or the people list to continue exploring.</p>
             </div>
           ) : null}
+          {status !== "error" && visibleNodes.length === 0 ? (
+            <div className="networkCanvasState networkFilterEmpty" role="status">
+              <h2>No people match these filters</h2>
+              <p>Remove one or more filters to show the network again.</p>
+              <button
+                type="button"
+                onClick={() => updateFilters(EMPTY_PEOPLE_FILTERS)}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : null}
           <p className="networkCanvasHint">
             Drag to pan · Scroll or pinch to zoom · Select a node or line to inspect
           </p>
@@ -763,7 +934,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
         <aside className="networkInspector" aria-label="Network details">
           {selectedPerson ? (
             <PersonInspector
-              graph={graph}
+              graph={visibleGraph}
               person={selectedPerson}
               onSelect={selectPerson}
             />
@@ -775,7 +946,7 @@ export function PeopleNetwork({ graph }: PeopleNetworkProps) {
               onSelect={selectPerson}
             />
           ) : (
-            <InitialInspector nodes={graph.nodes} onSelect={selectPerson} />
+            <InitialInspector nodes={visibleNodes} onSelect={selectPerson} />
           )}
         </aside>
       </div>

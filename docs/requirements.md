@@ -227,13 +227,14 @@ Search must degrade gracefully.
 
 ## FR-011 — People Directory
 
-The application must provide an alphabetical directory containing every stored researcher. Each entry must show the person's name, title, role, and research areas and link to their profile.
+The application must provide an alphabetical directory containing every stored researcher. Each entry must show the person's name, title, role, and research areas and link to their profile. Users may filter the directory by research-group membership, appointment title, and exact research area. Multiple values within one facet use OR matching, active facets combine with AND matching, and the selected filters are reflected in shareable query parameters.
 
 ### Acceptance tests
 
 - The directory contains all seeded researchers exactly once.
 - People are ordered alphabetically by their stored display name.
 - Every directory entry links to a valid person profile.
+- Filters update the visible count immediately, match secondary research-group memberships, survive refresh through the URL, and provide a clear no-results recovery action.
 
 ---
 
@@ -257,6 +258,8 @@ The application must provide a separate Network tab containing every stored rese
 
 Users must be able to pan, zoom, drag, find a person by name, inspect people and edges, traverse immediate connections, and open the same stable person profiles used by Search and People.
 
+The same research-group, appointment-title, and research-area facets used by People must be available on Network. Unmatched people, empty primary-group regions, and edges without two visible endpoints are hidden; name search, accessible HTML navigation, counts, selection, and announcements must reflect the filtered graph. Filters do not change graph topology or edge scores.
+
 ### Acceptance tests
 
 - Every stored researcher appears exactly once, including researchers with no meaningful connection.
@@ -267,6 +270,7 @@ Users must be able to pan, zoom, drag, find a person by name, inspect people and
 - Every edge exposes at least one shared stored value.
 - Name search and the HTML inspector remain usable if the graph renderer fails.
 - Connection copy explicitly distinguishes expertise overlap from collaboration.
+- Filtered network URLs are shareable, unmatched selections are cleared, and clearing filters restores the full graph.
 
 ---
 
@@ -588,7 +592,7 @@ Do not implement:
 
 - curated collaboration or reporting relationships;
 - topic or knowledge nodes;
-- advanced graph filters;
+- advanced graph filters such as topology, connection strength, methods, instruments, and software;
 - dashboards;
 - authentication;
 - user accounts;

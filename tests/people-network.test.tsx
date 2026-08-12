@@ -130,6 +130,7 @@ class MockResizeObserver {
 describe("PeopleNetwork", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, "", "/network");
     renderer.factory.mockImplementation(() => renderer.core);
     Object.keys(renderer.handlers).forEach((key) => delete renderer.handlers[key]);
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
@@ -262,7 +263,81 @@ describe("PeopleNetwork", () => {
     expect(renderer.core.zoom).toHaveBeenCalledWith(
       expect.objectContaining({ level: 1.22 }),
     );
-    expect(renderer.core.fit).toHaveBeenCalledWith(undefined, 48);
+    expect(renderer.core.fit).toHaveBeenCalledWith(renderer.collection, 48);
+  });
+
+  it("filters nodes, edges, name options, and the HTML directory", async () => {
+    const user = userEvent.setup();
+    render(<PeopleNetwork graph={graph} />);
+
+    await user.click(screen.getByRole("button", { name: "Appointment titles" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "Senior Research Fellow" }),
+    );
+
+    expect(screen.getByText("1 of 2 people shown.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Browse all 1 person"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Maya Chen.*Pulsar Astronomer/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Daniel Brooks.*Radio Astronomer/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: /1 person and 0 shared-expertise connections/,
+      }),
+    ).toBeInTheDocument();
+    expect(renderer.core.getElementById).toHaveBeenCalledWith("daniel");
+    expect(renderer.core.getElementById).toHaveBeenCalledWith("daniel--maya");
+    expect(window.location.search).toContain("title=Senior+Research+Fellow");
+  });
+
+  it("clears a selection that becomes hidden by filters", async () => {
+    const user = userEvent.setup();
+    render(<PeopleNetwork graph={graph} />);
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Find a person" }),
+      "Daniel Brooks",
+    );
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    expect(
+      screen.getByRole("heading", { name: "Daniel Brooks" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Appointment titles" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "Senior Research Fellow" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Select a person" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows and recovers from a no-results network filter", async () => {
+    const user = userEvent.setup();
+    render(<PeopleNetwork graph={graph} />);
+
+    await user.click(screen.getByRole("button", { name: "Appointment titles" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "Senior Research Fellow" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Research areas" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "interstellar medium" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "No people match these filters" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(
+      screen.queryByRole("heading", { name: "No people match these filters" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Browse all 2 people")).toBeInTheDocument();
   });
 
   it("keeps HTML navigation available when the renderer fails", async () => {

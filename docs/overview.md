@@ -242,7 +242,7 @@ The following must not be implemented in the MVP.
 
 - topic or knowledge-node graphs;
 - curated collaboration or reporting graphs;
-- advanced network filters;
+- advanced network filters beyond the shared research-group, appointment-title, and research-area facets;
 - dashboards;
 - feeds;
 - saved searches;

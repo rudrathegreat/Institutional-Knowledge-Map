@@ -36,7 +36,7 @@ describe("people directory and profiles", () => {
     removeTestDatabase();
   });
 
-  it("lists every person alphabetically with stable profile links", () => {
+  it("lists every person alphabetically with stable profile links", async () => {
     const people = listPeople();
     const names = people.map((person) => person.name);
 
@@ -51,7 +51,7 @@ describe("people directory and profiles", () => {
       },
     ]);
 
-    render(<PeoplePage />);
+    render(await PeoplePage({}));
 
     expect(screen.getByText("30 people")).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(30);
@@ -59,6 +59,21 @@ describe("people directory and profiles", () => {
       "href",
       "/people/maya-chen",
     );
+  });
+
+  it("honours valid filters in a shared directory URL", async () => {
+    render(
+      await PeoplePage({
+        searchParams: Promise.resolve({
+          group: "group_radio_pulsars",
+          title: "Senior Research Fellow",
+          area: "pulsars",
+        }),
+      }),
+    );
+
+    expect(screen.getByText("1 of 30 people")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Maya Chen/ })).toBeInTheDocument();
   });
 
   it("renders all stored fields on a profile with person-specific metadata", async () => {

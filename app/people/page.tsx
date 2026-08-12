@@ -1,12 +1,25 @@
-import Link from "next/link";
-
+import { PeopleDirectory } from "@/components/PeopleDirectory";
+import {
+  derivePeopleFilterOptions,
+  parsePeopleFilters,
+  type PeopleFilterSearchParams,
+} from "@/lib/people-filters";
 import { listPeople } from "@/lib/people";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default function PeoplePage() {
+export default async function PeoplePage({
+  searchParams = Promise.resolve({}),
+}: {
+  searchParams?: Promise<PeopleFilterSearchParams>;
+}) {
   const people = listPeople();
+  const filterOptions = derivePeopleFilterOptions(people);
+  const initialFilters = parsePeopleFilters(
+    await searchParams,
+    filterOptions,
+  );
 
   return (
     <main className="directoryPage">
@@ -20,35 +33,7 @@ export default function PeoplePage() {
           </p>
         </header>
 
-        <p className="directoryCount">
-          {people.length} {people.length === 1 ? "person" : "people"}
-        </p>
-
-        <div className="directoryList">
-          {people.map((person) => (
-            <article className="directoryPerson" key={person.id}>
-              <Link
-                className="directoryPersonLink"
-                href={`/people/${person.slug}`}
-              >
-                <span className="directoryPersonIdentity">
-                  <span className="directoryPersonName">{person.name}</span>
-                  <span className="directoryPersonRole">
-                    {person.title}
-                    <span aria-hidden="true"> · </span>
-                    {person.role}
-                  </span>
-                </span>
-                <span
-                  className="directoryPersonExpertise"
-                  aria-label="Research areas"
-                >
-                  {person.researchAreas.join(" · ")}
-                </span>
-              </Link>
-            </article>
-          ))}
-        </div>
+        <PeopleDirectory initialFilters={initialFilters} people={people} />
       </div>
     </main>
   );

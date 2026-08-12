@@ -53,14 +53,14 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Query-specific `Helpful` / `Not relevant` feedback with no raw-query storage, public totals, or live ranking effect
 - Sixty feedback submissions per IP per minute on the feedback endpoint
 - Persistent Search, People, and Network navigation
-- Alphabetical directory of every stored researcher
+- Alphabetical directory of every stored researcher with shareable research-group, appointment-title, and research-area filters
 - Stable, human-readable profile URLs with detailed expertise information
 - Clearly labelled mock ORCID iDs and three newest-first fictional publications on every profile
-- Interactive people network grouped by each person's primary research-group tag, with all tags visible and connections derived deterministically from shared profile fields
+- Interactive people network grouped by each person's primary research-group tag, with shared faceted filters, all tags visible, and connections derived deterministically from shared profile fields
 - Name-based graph navigation, connection evidence, and profile links
 - Loading, validation, error, and empty-result states
 - Repository-controlled fictional seed data with 30 detailed biographies and 90 ORCID-style publication records
 
-The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, advanced network filters, curated collaboration data, application-managed authentication, embeddings, and vector databases are not included in this milestone.
+The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, advanced topology or connection-strength filters, curated collaboration data, application-managed authentication, embeddings, and vector databases are not included in this milestone.
 
 All researcher identities, ORCID-style identifiers, biographies, and publications in the seed data are fictional. Mock ORCID iDs are deliberately non-production identifiers and do not link to ORCID records. Any resemblance to a real person or publication is coincidental.

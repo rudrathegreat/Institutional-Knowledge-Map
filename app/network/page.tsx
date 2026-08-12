@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 
 import { PeopleNetwork } from "@/components/PeopleNetwork";
+import {
+  derivePeopleFilterOptions,
+  parsePeopleFilters,
+  type PeopleFilterSearchParams,
+} from "@/lib/people-filters";
 import { buildPeopleGraph } from "@/lib/people-graph";
 import { listPeople } from "@/lib/people";
 import { listResearchGroups } from "@/lib/research-groups";
@@ -13,8 +18,17 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default function NetworkPage() {
+export default async function NetworkPage({
+  searchParams = Promise.resolve({}),
+}: {
+  searchParams?: Promise<PeopleFilterSearchParams>;
+}) {
   const graph = buildPeopleGraph(listPeople(), listResearchGroups());
+  const filterOptions = derivePeopleFilterOptions(graph.nodes);
+  const initialFilters = parsePeopleFilters(
+    await searchParams,
+    filterOptions,
+  );
 
   return (
     <main className="networkPage">
@@ -29,7 +43,7 @@ export default function NetworkPage() {
           </p>
         </header>
 
-        <PeopleNetwork graph={graph} />
+        <PeopleNetwork graph={graph} initialFilters={initialFilters} />
       </div>
     </main>
   );
