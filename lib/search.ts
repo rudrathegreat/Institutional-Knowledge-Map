@@ -1,15 +1,20 @@
-import type { OrcidWork, Researcher } from "@/db/schema";
-import { orcidWorks, researchers } from "@/db/schema";
+import type { OrcidWork, Researcher, ResearchGroup } from "@/db/schema";
+import { orcidWorks, researchers, researchGroups } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import type {
   PublicationEvidencePayload,
+  ResearchGroupSearchResultPayload,
   ResearchGroupSummary,
   SearchEvidenceCategory,
   SearchEvidenceMatchPayload,
   SearchEvidenceOrigin,
 } from "@/lib/api-types";
 import { normalizeSearchText } from "@/lib/search-text";
-import { attachResearchGroups } from "@/lib/research-groups";
+import {
+  attachResearchGroups,
+  getResearchGroupMemberCounts,
+} from "@/lib/research-groups";
+import { rankResearchGroups } from "@/lib/research-group-search";
 
 export { normalizeSearchText } from "@/lib/search-text";
 
@@ -496,11 +501,25 @@ function getVocabularyValues(researcher: Researcher): string[] {
   ];
 }
 
-export function buildExpertiseVocabulary(records: SearchableResearcher[]): string[] {
+export function buildExpertiseVocabulary(
+  records: SearchableResearcher[],
+  groups: Array<Pick<ResearchGroup, "researchAreas">> = [],
+): string[] {
   const valuesByNormalizedTerm = new Map<string, string>();
 
   for (const researcher of records) {
     for (const value of getVocabularyValues(researcher)) {
+      const trimmedValue = value.trim();
+      const normalizedValue = normalizeSearchText(trimmedValue);
+
+      if (normalizedValue && !valuesByNormalizedTerm.has(normalizedValue)) {
+        valuesByNormalizedTerm.set(normalizedValue, trimmedValue);
+      }
+    }
+  }
+
+  for (const group of groups) {
+    for (const value of group.researchAreas) {
       const trimmedValue = value.trim();
       const normalizedValue = normalizeSearchText(trimmedValue);
 
@@ -518,9 +537,13 @@ export function buildExpertiseVocabulary(records: SearchableResearcher[]): strin
 export function validateInterpretedTerms(
   records: SearchableResearcher[],
   terms: string[],
+  groups: Array<Pick<ResearchGroup, "researchAreas">> = [],
 ): string[] {
   const vocabulary = new Map(
-    buildExpertiseVocabulary(records).map((term) => [normalizeSearchText(term), term]),
+    buildExpertiseVocabulary(records, groups).map((term) => [
+      normalizeSearchText(term),
+      term,
+    ]),
   );
   const validTerms = new Map<string, string>();
 
@@ -670,8 +693,10 @@ export function rankResearchers(
 }
 
 export function getExpertiseVocabulary(): string[] {
-  const records = getDatabase().select().from(researchers).all();
-  return buildExpertiseVocabulary(records);
+  const db = getDatabase();
+  const records = db.select().from(researchers).all();
+  const groups = db.select().from(researchGroups).all();
+  return buildExpertiseVocabulary(records, groups);
 }
 
 export function searchResearchers(
@@ -688,13 +713,50 @@ export function searchResearchersWithContext(
   const db = getDatabase();
   const records = attachResearchGroups(db.select().from(researchers).all());
   const publications = db.select().from(orcidWorks).all();
+  const groups = db.select().from(researchGroups).all();
   const validInterpretedTerms = validateInterpretedTerms(
     records,
     interpretedTerms,
+    groups,
   );
 
   return {
     results: rankResearchers(records, query, validInterpretedTerms, publications),
+    validInterpretedTerms,
+  };
+}
+
+export function searchDirectoryWithContext(
+  query: string,
+  interpretedTerms: string[] = [],
+): {
+  results: SearchResult[];
+  researchGroups: ResearchGroupSearchResultPayload[];
+  validInterpretedTerms: string[];
+} {
+  const db = getDatabase();
+  const records = attachResearchGroups(db.select().from(researchers).all());
+  const publications = db.select().from(orcidWorks).all();
+  const groups = db.select().from(researchGroups).all();
+  const validInterpretedTerms = validateInterpretedTerms(
+    records,
+    interpretedTerms,
+    groups,
+  );
+
+  return {
+    results: rankResearchers(
+      records,
+      query,
+      validInterpretedTerms,
+      publications,
+    ),
+    researchGroups: rankResearchGroups(
+      groups,
+      query,
+      validInterpretedTerms,
+      getResearchGroupMemberCounts(),
+    ),
     validInterpretedTerms,
   };
 }

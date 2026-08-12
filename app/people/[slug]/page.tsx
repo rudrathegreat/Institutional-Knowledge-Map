@@ -93,7 +93,7 @@ export default async function PersonPage({ params }: PersonPageProps) {
               <ul>
                 {person.researchGroups.map((group) => (
                   <li key={group.id}>
-                    {group.name}
+                    <Link href={`/groups/${group.slug}`}>{group.name}</Link>
                     {group.isPrimary ? <span>Primary</span> : null}
                   </li>
                 ))}

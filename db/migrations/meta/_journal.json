@@ -36,6 +36,13 @@
       "when": 1786492800000,
       "tag": "0004_add_research_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786521600000,
+      "tag": "0005_enrich_research_groups",
+      "breakpoints": true
     }
   ]
 }

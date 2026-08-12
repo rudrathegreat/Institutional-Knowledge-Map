@@ -79,6 +79,15 @@ describe("database seeding", () => {
     expect(new Set(groupRows.map(({ name }) => name))).toHaveLength(
       MOCK_RESEARCH_GROUP_COUNT,
     );
+    expect(new Set(groupRows.map(({ slug }) => slug))).toHaveLength(
+      MOCK_RESEARCH_GROUP_COUNT,
+    );
+    expect(
+      groupRows.every(
+        ({ slug, summary, researchAreas }) =>
+          slug.length > 0 && summary.length > 0 && researchAreas.length > 0,
+      ),
+    ).toBe(true);
     expect(membershipRows).toHaveLength(MOCK_RESEARCH_GROUP_MEMBERSHIP_COUNT);
     expect(
       membershipRows.filter(({ isPrimary }) => isPrimary),
@@ -144,6 +153,11 @@ describe("database seeding", () => {
       .from(orcidWorks)
       .all()
       .map((row) => JSON.stringify(row));
+    const firstGroups = firstConnection.db
+      .select()
+      .from(researchGroups)
+      .all()
+      .map((row) => JSON.stringify(row));
     firstConnection.sqlite.close();
 
     seedDatabase(TEST_DATABASE_PATH);
@@ -158,10 +172,16 @@ describe("database seeding", () => {
       .from(orcidWorks)
       .all()
       .map((row) => JSON.stringify(row));
+    const secondGroups = secondConnection.db
+      .select()
+      .from(researchGroups)
+      .all()
+      .map((row) => JSON.stringify(row));
     secondConnection.sqlite.close();
 
     expect(secondRows).toEqual(firstRows);
     expect(secondWorks).toEqual(firstWorks);
+    expect(secondGroups).toEqual(firstGroups);
   });
 
   it("preserves feedback for researcher IDs that remain in the seed", () => {

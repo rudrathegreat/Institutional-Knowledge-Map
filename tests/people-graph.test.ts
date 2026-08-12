@@ -143,8 +143,8 @@ describe("people graph derivation", () => {
     const groupedResearcher = {
       ...researcher("one", "One Person"),
       researchGroups: [
-        { id: "alpha", name: "Alpha Group", isPrimary: true },
-        { id: "beta", name: "Beta Group", isPrimary: false },
+        { id: "alpha", slug: "alpha-group", name: "Alpha Group", isPrimary: true },
+        { id: "beta", slug: "beta-group", name: "Beta Group", isPrimary: false },
       ],
     };
     const graph = buildPeopleGraph(

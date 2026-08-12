@@ -2,7 +2,7 @@
 
 A focused institutional expertise directory that helps users answer one question: **Who should I talk to?**
 
-The application provides Puter-assisted natural-language search, an alphabetical people directory, detailed person profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers. Puter interprets ordinary-language needs into a controlled expertise vocabulary, offers one lightweight search-refinement prompt when a query has materially different meanings, re-ranks server-retrieved candidates for the specific query, and generates evidence-grounded match explanations and professional outreach questions; deterministic lexical search remains available whenever AI is unavailable.
+The application provides Puter-assisted natural-language search across people and research groups, an alphabetical people directory, detailed person and group profiles, and an interactive shared-expertise network backed by a deterministic SQLite database containing 30 fictional astronomy researchers and six curated research groups. Puter interprets ordinary-language needs into a controlled expertise vocabulary, offers one lightweight search-refinement prompt when a query has materially different meanings, re-ranks server-retrieved people for the specific query, and generates evidence-grounded match explanations and professional outreach questions; deterministic lexical search remains available whenever AI is unavailable.
 
 ## Run locally
 
@@ -46,6 +46,8 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Browser-side Puter query interpretation using an explicit Google Gemini model
 - Weighted query expansion (`raw lexical score + 0.35 × expanded-term score`)
 - Search across names, research-group affiliations, roles, biographies, research areas, methods, instruments, software, keywords, and low-weight recent-publication titles
+- People-first results with up to five people followed by up to two deterministically ranked research groups
+- Curated research-group summaries, focus areas, stable detail URLs, and linked primary and secondary members
 - Candidate-constrained Puter re-ranking using curated expertise as primary evidence and recent publications as supporting evidence
 - A query-specific `Suggested first contact` marker after successful AI re-ranking, with deterministic ordering and reasons as the fallback
 - Copyable, professional `Suggested question to ask` guidance on the final top three AI-ranked results
@@ -61,6 +63,6 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Loading, validation, error, and empty-result states
 - Repository-controlled fictional seed data with 30 detailed biographies and 90 ORCID-style publication records
 
-The product and technical requirements are documented in [`docs/`](docs/). Real institutional data, advanced topology or connection-strength filters, curated collaboration data, application-managed authentication, embeddings, and vector databases are not included in this milestone.
+The product and technical requirements are documented in [`docs/`](docs/). Project search is deferred until projects have a first-class data model; publications are not treated as projects. Real institutional data, advanced topology or connection-strength filters, curated collaboration data, application-managed authentication, embeddings, and vector databases are not included in this milestone.
 
 All researcher identities, ORCID-style identifiers, biographies, and publications in the seed data are fictional. Mock ORCID iDs are deliberately non-production identifiers and do not link to ORCID records. Any resemblance to a real person or publication is coincidental.

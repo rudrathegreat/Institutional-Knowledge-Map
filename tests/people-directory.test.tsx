@@ -14,8 +14,8 @@ const people = [
     role: "Pulsar Astronomer",
     researchAreas: ["pulsars", "radio astronomy"],
     researchGroups: [
-      { id: "radio", name: "Radio Astronomy", isPrimary: true },
-      { id: "methods", name: "Research Methods", isPrimary: false },
+      { id: "radio", slug: "radio-astronomy", name: "Radio Astronomy", isPrimary: true },
+      { id: "methods", slug: "research-methods", name: "Research Methods", isPrimary: false },
     ],
   },
   {
@@ -26,7 +26,7 @@ const people = [
     role: "Scientific Workflow Specialist",
     researchAreas: ["research software"],
     researchGroups: [
-      { id: "methods", name: "Research Methods", isPrimary: true },
+      { id: "methods", slug: "research-methods", name: "Research Methods", isPrimary: true },
     ],
   },
 ];

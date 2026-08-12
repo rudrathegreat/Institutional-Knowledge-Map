@@ -79,6 +79,7 @@ describe("POST /api/search", () => {
 
     expect(response.status).toBe(200);
     expect(payload.interpretedTopics).toEqual([]);
+    expect(payload.researchGroups).toEqual([]);
     expect(payload.results[0]).toMatchObject({
       id: "researcher_001",
       slug: "maya-chen",
@@ -86,6 +87,7 @@ describe("POST /api/search", () => {
       researchGroups: [
         {
           id: "group_radio_pulsars",
+          slug: "radio-astronomy-pulsars",
           name: "Radio Astronomy & Pulsars",
           isPrimary: true,
         },
@@ -122,6 +124,18 @@ describe("POST /api/search", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
+    expect(payload.researchGroups[0]).toMatchObject({
+      id: "group_radio_pulsars",
+      slug: "radio-astronomy-pulsars",
+      name: "Radio Astronomy & Pulsars",
+      memberCount: 7,
+      reason: expect.stringContaining("exact match"),
+      evidence: {
+        matches: expect.arrayContaining([
+          expect.objectContaining({ category: "name", origins: ["query"] }),
+        ]),
+      },
+    });
     expect(payload.results).toHaveLength(5);
     expect(
       payload.results.every(
@@ -134,6 +148,20 @@ describe("POST /api/search", () => {
         expect.objectContaining({ category: "researchGroup" }),
       ]),
     );
+  });
+
+  it("returns a group-only match without creating person recommendations", async () => {
+    const response = await POST(
+      requestWithBody(JSON.stringify({ query: "FAIR" })),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.results).toEqual([]);
+    expect(payload.researchGroups).toEqual([
+      expect.objectContaining({ id: "group_data_methods" }),
+    ]);
+    expect(payload.researchGroups[0]).not.toHaveProperty("recommendationId");
   });
 
   it("retrieves a researcher using publication-title evidence", async () => {

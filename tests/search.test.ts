@@ -101,7 +101,7 @@ describe("lexical researcher ranking", () => {
   });
 
   it("builds a unique vocabulary from controlled expertise fields", () => {
-    const vocabulary = buildExpertiseVocabulary(records);
+    const vocabulary = buildExpertiseVocabulary(records, mockResearchGroups);
 
     expect(vocabulary).toContain("Pulsar Astronomer");
     expect(vocabulary).toContain("pulsar timing");
@@ -112,6 +112,8 @@ describe("lexical researcher ranking", () => {
       "Long-baseline pulsar timing constraints on rotational noise with MeerKAT",
     );
     expect(vocabulary).not.toContain("Radio Astronomy & Pulsars");
+    expect(vocabulary).not.toContain(mockResearchGroups[0].summary);
+    expect(vocabulary).toContain("reproducible research");
     expect(vocabulary.filter((term) => term === "Python")).toHaveLength(1);
   });
 

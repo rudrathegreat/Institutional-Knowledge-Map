@@ -15,6 +15,7 @@ const result: SearchResultPayload = {
   researchGroups: [
     {
       id: "radio-group",
+      slug: "radio-astronomy-pulsars",
       name: "Radio Astronomy & Pulsars",
       isPrimary: true,
     },

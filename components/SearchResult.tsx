@@ -262,7 +262,12 @@ export function SearchResult({
             : "Research groups"}
         </span>
         {researchGroups.length > 0
-          ? researchGroups.map(({ name }) => name).join(" · ")
+          ? researchGroups.map(({ id, slug, name }, index) => (
+              <span key={id}>
+                {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                <Link href={`/groups/${slug}`}>{name}</Link>
+              </span>
+            ))
           : "No research group listed"}
       </p>
 

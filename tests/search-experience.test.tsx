@@ -421,6 +421,127 @@ describe("SearchExperience", () => {
     });
   });
 
+  it("renders people before research groups and sends only people to Puter", async () => {
+    const user = userEvent.setup();
+    puterAiMocks.interpretQuery.mockResolvedValue({
+      kind: "ready",
+      interpretation: "Finding pulsar expertise and groups.",
+      interpretedTopics: ["Pulsars"],
+      searchTerms: ["pulsars"],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          interpretedTopics: [],
+          results: [
+            {
+              recommendationId: "10000000-0000-4000-8000-000000000101",
+              id: "researcher_001",
+              slug: "maya-chen",
+              name: "Maya Chen",
+              title: "Senior Research Fellow",
+              role: "Pulsar Astronomer",
+              researchGroups: [],
+              researchAreas: ["pulsars"],
+              reason: "Their stored profile includes pulsars.",
+              evidence: {
+                biography: "Maya studies pulsars.",
+                methods: ["pulsar timing"],
+                instruments: ["MeerKAT"],
+                software: ["TEMPO2"],
+                keywords: ["timing noise"],
+                publications: [],
+                matches: [],
+              },
+            },
+          ],
+          researchGroups: [
+            {
+              id: "group_radio_pulsars",
+              slug: "radio-astronomy-pulsars",
+              name: "Radio Astronomy & Pulsars",
+              summary: "A group studying pulsars and compact radio sources.",
+              researchAreas: ["pulsars", "radio astronomy"],
+              memberCount: 7,
+              reason: "The group's curated focus areas include pulsars.",
+              evidence: { matches: [] },
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<SearchExperience expertiseVocabulary={["pulsars"]} />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "pulsars{enter}",
+    );
+
+    expect(
+      await screen.findByText(
+        "2 relevant results: 1 person and 1 research group",
+      ),
+    ).toBeInTheDocument();
+    const resultSections = screen.getAllByRole("heading", {
+      name: /People|Research groups/,
+    });
+    expect(resultSections.map(({ textContent }) => textContent)).toEqual([
+      "People",
+      "Research groups",
+    ]);
+    expect(puterAiMocks.explainCandidates).toHaveBeenCalledWith(
+      "pulsars",
+      [expect.objectContaining({ id: "researcher_001" })],
+      expect.objectContaining({ chat: expect.any(Function) }),
+    );
+  });
+
+  it("treats a group-only response as a successful result", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          interpretedTopics: [],
+          results: [],
+          researchGroups: [
+            {
+              id: "group_data_methods",
+              slug: "data-software-research-methods",
+              name: "Data, Software & Research Methods",
+              summary: "A group advancing reproducible scientific workflows.",
+              researchAreas: ["reproducible research"],
+              memberCount: 6,
+              reason:
+                "The group's curated focus areas include reproducible research.",
+              evidence: { matches: [] },
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<SearchExperience />);
+    await user.type(
+      screen.getByLabelText("Search for expertise"),
+      "reproducible research{enter}",
+    );
+
+    expect(
+      await screen.findByText("1 relevant research group"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Data, Software & Research Methods" }),
+    ).toHaveAttribute("href", "/groups/data-software-research-methods");
+    expect(
+      screen.queryByRole("heading", { name: "No strong matches found." }),
+    ).not.toBeInTheDocument();
+    expect(puterAiMocks.explainCandidates).not.toHaveBeenCalled();
+  });
+
   it("pauses an ambiguous search until a refinement is selected and submitted", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue({

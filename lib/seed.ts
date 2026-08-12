@@ -10,6 +10,7 @@ import {
   researcherGroupMemberships,
   researchers,
   researchGroups,
+  type NewResearchGroup,
 } from "@/db/schema";
 import { DEFAULT_DATABASE_PATH } from "@/lib/db";
 import {
@@ -39,10 +40,7 @@ export interface MockOrcidRecord {
   works: MockOrcidWork[];
 }
 
-export interface MockResearchGroup {
-  id: string;
-  name: string;
-}
+export type MockResearchGroup = NewResearchGroup;
 
 export interface MockResearchGroupMembership {
   researcherId: string;
@@ -83,16 +81,25 @@ function validateMockResearchGroups(
 ): void {
   const researcherIds = new Set(mockResearchers.map(({ id }) => id));
   const groupIds = new Set(mockResearchGroups.map(({ id }) => id));
+  const groupSlugs = mockResearchGroups.map(({ slug }) => slug.trim());
   const groupNames = mockResearchGroups.map(({ name }) => name.trim());
 
   if (
     mockResearchGroups.length !== MOCK_RESEARCH_GROUP_COUNT ||
     groupIds.size !== MOCK_RESEARCH_GROUP_COUNT ||
+    groupSlugs.some((slug) => !slug) ||
+    new Set(groupSlugs).size !== MOCK_RESEARCH_GROUP_COUNT ||
     groupNames.some((name) => !name) ||
-    new Set(groupNames).size !== MOCK_RESEARCH_GROUP_COUNT
+    new Set(groupNames).size !== MOCK_RESEARCH_GROUP_COUNT ||
+    mockResearchGroups.some(
+      ({ summary, researchAreas }) =>
+        !summary.trim() ||
+        researchAreas.length === 0 ||
+        researchAreas.some((area) => !area.trim()),
+    )
   ) {
     throw new Error(
-      `Mock research groups must contain ${MOCK_RESEARCH_GROUP_COUNT} unique IDs and names.`,
+      `Mock research groups must contain ${MOCK_RESEARCH_GROUP_COUNT} complete records with unique IDs, slugs, and names.`,
     );
   }
 

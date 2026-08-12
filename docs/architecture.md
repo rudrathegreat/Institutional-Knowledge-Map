@@ -158,7 +158,7 @@ embedding_json
 
 ### `research_groups` and `researcher_group_memberships`
 
-Research groups are stable named records used as database-backed tags. A cascading join table associates several tags with each researcher, and a partial unique index permits at most one primary tag. The Network displays every stored tag on its person and uses the primary tag for its labelled region and colour; membership never creates or strengthens a shared-expertise edge.
+Research groups are stable records with a unique slug, curated summary, and curated focus areas. A cascading join table associates several groups with each researcher, and a partial unique index permits at most one primary group. The Network displays every stored group tag on its person and uses the primary tag for its labelled region and colour; membership never creates or strengthens a shared-expertise edge. Search ranks groups only from their own curated name, focus areas, and summary—not by aggregating member profiles.
 
 ### `orcid_works`
 
@@ -188,7 +188,7 @@ Software: Python, TEMPO2.
 Biography: ...
 ```
 
-The same structured expertise fields also produce the controlled expertise vocabulary sent to the search client. Names, biography prose, and research-group names are not vocabulary entries. Group names remain available to raw lexical retrieval without allowing AI expansion to treat affiliation as expertise.
+The same structured expertise fields plus curated group focus areas produce the controlled expertise vocabulary sent to the search client. Names, biography prose, research-group names, and group summary prose are not vocabulary entries. Group names and summaries remain available to raw lexical retrieval without allowing AI expansion to treat affiliation prose as expertise.
 
 Publication titles are not added to the controlled vocabulary or the stored search document. They are scored separately as capped, low-weight evidence.
 
@@ -238,7 +238,7 @@ The MVP uses deterministic lexical retrieval augmented by controlled query expan
                    merged ranking
                          │
                          ▼
-                    top results
+             top 5 people + top 2 groups
 ```
 
 ---
@@ -484,9 +484,23 @@ Response:
         ]
       }
     }
+  ],
+  "researchGroups": [
+    {
+      "id": "group_radio_pulsars",
+      "slug": "radio-astronomy-pulsars",
+      "name": "Radio Astronomy & Pulsars",
+      "summary": "The group studies pulsars and other compact radio sources...",
+      "researchAreas": ["pulsars", "radio astronomy"],
+      "memberCount": 7,
+      "reason": "The group's curated focus areas include pulsars, matching your search.",
+      "evidence": { "matches": [] }
+    }
   ]
 }
 ```
+
+Only the `results` person array is persisted as recommendation contexts or sent to Puter for re-ranking. `researchGroups` is deterministic, contains no recommendation IDs, and remains after the people section in the browser. Project results are deferred until a first-class project data source exists; publication records are never repurposed as projects.
 
 ```http
 POST /api/recommendation-feedback

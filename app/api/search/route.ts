@@ -6,7 +6,7 @@ import {
   MAX_INTERPRETED_TERM_LENGTH,
   MAX_INTERPRETED_TERMS,
   MAX_QUERY_LENGTH,
-  searchResearchersWithContext,
+  searchDirectoryWithContext,
 } from "@/lib/search";
 
 export const runtime = "nodejs";
@@ -125,14 +125,16 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const { results, validInterpretedTerms } = searchResearchersWithContext(
-      query,
-      parsedBody.data.interpretedTerms ?? [],
-    );
+    const { results, researchGroups, validInterpretedTerms } =
+      searchDirectoryWithContext(
+        query,
+        parsedBody.data.interpretedTerms ?? [],
+      );
 
     return NextResponse.json({
       interpretedTopics: [],
       results: createRecommendationContexts(results, validInterpretedTerms),
+      researchGroups,
     });
   } catch {
     return errorResponse(

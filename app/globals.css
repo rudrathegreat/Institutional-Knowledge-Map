@@ -145,6 +145,8 @@ button:disabled {
 .searchRefinementOption:focus-visible,
 .aiNotice button:focus-visible,
 .resultHeader a:focus-visible,
+.researchGroupResultHeader a:focus-visible,
+.resultResearchGroups a:focus-visible,
 .suggestedQuestion button:focus-visible,
 .recommendationFeedback button:focus-visible,
 .evidenceDisclosure summary:focus-visible,
@@ -466,6 +468,17 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
+.resultSection > h2 {
+  margin: 25px 0 11px;
+  color: var(--primary-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.resultCount + .resultSection > h2 {
+  margin-top: 0;
+}
+
 .searchResult {
   padding: 27px 2px 29px;
   border-bottom: 1px solid var(--border);
@@ -541,6 +554,18 @@ button:disabled {
   font-weight: 600;
 }
 
+.resultResearchGroups a {
+  color: #555562;
+  font-weight: 400;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.resultResearchGroups a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentcolor;
+}
+
 .expertise {
   margin: 15px 0 0;
   color: #4e4e4e;
@@ -565,6 +590,67 @@ button:disabled {
   color: var(--secondary-text);
   font-size: 15px;
   line-height: 1.6;
+}
+
+.researchGroupResults {
+  margin-top: 38px;
+}
+
+.researchGroupResultList {
+  border-top: 1px solid var(--border);
+}
+
+.researchGroupResult {
+  padding: 23px 2px 25px;
+  border-bottom: 1px solid var(--border);
+  animation: reveal 180ms ease both;
+}
+
+.researchGroupResultHeader .resultType {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.researchGroupResultHeader h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.researchGroupResultHeader h3 a {
+  color: inherit;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+}
+
+.researchGroupResultHeader h3 a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentcolor;
+}
+
+.researchGroupResultHeader > p:last-child {
+  margin: 4px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.researchGroupSummary {
+  max-width: 680px;
+  margin: 13px 0 0;
+  color: #4e4e4e;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.researchGroupResult .reason h4 {
+  margin: 0 0 5px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .suggestedQuestion {
@@ -1230,6 +1316,17 @@ button:disabled {
   font-size: 13px;
 }
 
+.profileResearchGroups li a {
+  color: inherit;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.profileResearchGroups li a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentcolor;
+}
+
 .profileResearchGroups li span,
 .networkMemberships li span {
   color: #5b5b79;
@@ -1356,6 +1453,77 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 7px;
   font-size: 13px;
+}
+
+.groupFocusAreas {
+  padding: 35px 0 39px;
+  border-bottom: 1px solid var(--border);
+}
+
+.groupFocusAreas h2,
+.groupMembers h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.groupMembers {
+  padding: 35px 0 0;
+}
+
+.groupMembers header p {
+  margin: 8px 0 0;
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.groupMembers ul {
+  margin: 22px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.groupMembers li {
+  border-bottom: 1px solid var(--border);
+}
+
+.groupMembers a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.groupMembers a:hover {
+  background: var(--subtle-background);
+}
+
+.groupMembers a > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.groupMembers strong {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.groupMembers a > span:first-child > span {
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.membershipType {
+  flex: 0 0 auto;
+  color: var(--muted-text);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
 }
 
 .networkPage {

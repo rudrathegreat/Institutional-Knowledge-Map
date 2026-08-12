@@ -8,8 +8,31 @@ export interface PublicationEvidencePayload {
 
 export interface ResearchGroupSummary {
   id: string;
+  slug: string;
   name: string;
   isPrimary: boolean;
+}
+
+export type ResearchGroupEvidenceCategory = "name" | "summary" | "researchArea";
+
+export interface ResearchGroupEvidenceMatchPayload {
+  category: ResearchGroupEvidenceCategory;
+  value: string;
+  origins: SearchEvidenceOrigin[];
+  matchedTerms: string[];
+}
+
+export interface ResearchGroupSearchResultPayload {
+  id: string;
+  slug: string;
+  name: string;
+  summary: string;
+  researchAreas: string[];
+  memberCount: number;
+  reason: string;
+  evidence: {
+    matches: ResearchGroupEvidenceMatchPayload[];
+  };
 }
 
 export type SearchEvidenceOrigin = "query" | "interpreted";
@@ -63,6 +86,7 @@ export interface SearchResultPayload {
 export interface SearchResponsePayload {
   interpretedTopics: string[];
   results: SearchResultPayload[];
+  researchGroups: ResearchGroupSearchResultPayload[];
 }
 
 export interface SearchErrorPayload {

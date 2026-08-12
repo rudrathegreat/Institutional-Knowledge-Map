@@ -83,6 +83,7 @@ const graph: PeopleGraph = {
       researchGroups: [
         {
           id: "radio-group",
+          slug: "radio-astronomy-pulsars",
           name: "Radio Astronomy & Pulsars",
           isPrimary: true,
         },
@@ -99,6 +100,7 @@ const graph: PeopleGraph = {
       researchGroups: [
         {
           id: "radio-group",
+          slug: "radio-astronomy-pulsars",
           name: "Radio Astronomy & Pulsars",
           isPrimary: true,
         },

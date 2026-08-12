@@ -1,8 +1,9 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import type { Researcher, ResearchGroup } from "@/db/schema";
 import {
   researcherGroupMemberships,
+  researchers,
   researchGroups,
 } from "@/db/schema";
 import type { ResearchGroupSummary } from "@/lib/api-types";
@@ -32,6 +33,7 @@ export function getResearchGroupsByResearcherId(
     .select({
       researcherId: researcherGroupMemberships.researcherId,
       id: researchGroups.id,
+      slug: researchGroups.slug,
       name: researchGroups.name,
       isPrimary: researcherGroupMemberships.isPrimary,
     })
@@ -51,13 +53,79 @@ export function getResearchGroupsByResearcherId(
     : baseQuery.all();
   const groupsByResearcherId = new Map<string, ResearchGroupSummary[]>();
 
-  for (const { researcherId, id, name, isPrimary } of rows) {
+  for (const { researcherId, id, slug, name, isPrimary } of rows) {
     const memberships = groupsByResearcherId.get(researcherId) ?? [];
-    memberships.push({ id, name, isPrimary });
+    memberships.push({ id, slug, name, isPrimary });
     groupsByResearcherId.set(researcherId, memberships);
   }
 
   return groupsByResearcherId;
+}
+
+export interface ResearchGroupMember {
+  id: string;
+  slug: string;
+  name: string;
+  title: string;
+  role: string;
+  isPrimary: boolean;
+}
+
+export type ResearchGroupProfile = ResearchGroup & {
+  members: ResearchGroupMember[];
+};
+
+export function getResearchGroupMemberCounts(): Map<string, number> {
+  const rows = getDatabase()
+    .select({
+      researchGroupId: researcherGroupMemberships.researchGroupId,
+      memberCount: sql<number>`count(*)`,
+    })
+    .from(researcherGroupMemberships)
+    .groupBy(researcherGroupMemberships.researchGroupId)
+    .all();
+
+  return new Map(
+    rows.map(({ researchGroupId, memberCount }) => [
+      researchGroupId,
+      Number(memberCount),
+    ]),
+  );
+}
+
+export function getResearchGroupBySlug(
+  slug: string,
+): ResearchGroupProfile | undefined {
+  const db = getDatabase();
+  const group = db
+    .select()
+    .from(researchGroups)
+    .where(eq(researchGroups.slug, slug))
+    .get();
+
+  if (!group) {
+    return undefined;
+  }
+
+  const members = db
+    .select({
+      id: researchers.id,
+      slug: researchers.slug,
+      name: researchers.name,
+      title: researchers.title,
+      role: researchers.role,
+      isPrimary: researcherGroupMemberships.isPrimary,
+    })
+    .from(researcherGroupMemberships)
+    .innerJoin(
+      researchers,
+      eq(researcherGroupMemberships.researcherId, researchers.id),
+    )
+    .where(eq(researcherGroupMemberships.researchGroupId, group.id))
+    .orderBy(asc(researchers.name))
+    .all();
+
+  return { ...group, members };
 }
 
 export function attachResearchGroups(

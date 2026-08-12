@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { SearchResult } from "@/components/SearchResult";
+import { ResearchGroupSearchResult } from "@/components/ResearchGroupSearchResult";
 import type {
   RecommendationRankingMode,
+  ResearchGroupSearchResultPayload,
   SearchErrorPayload,
   SearchResponsePayload,
   SearchResultPayload,
@@ -51,6 +53,9 @@ export function SearchExperience({
 }: SearchExperienceProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultPayload[]>([]);
+  const [researchGroupResults, setResearchGroupResults] = useState<
+    ResearchGroupSearchResultPayload[]
+  >([]);
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [message, setMessage] = useState("");
   const [interpretation, setInterpretation] = useState("");
@@ -139,6 +144,7 @@ export function SearchExperience({
 
     if (!trimmedQuery) {
       setResults([]);
+      setResearchGroupResults([]);
       setMessage(
         "Enter a name, research group, topic, method, instrument, software term, or question.",
       );
@@ -148,6 +154,7 @@ export function SearchExperience({
 
     if (trimmedQuery.length > MAX_QUERY_LENGTH) {
       setResults([]);
+      setResearchGroupResults([]);
       setMessage(`Keep your search to ${MAX_QUERY_LENGTH.toLocaleString()} characters or fewer.`);
       setSearchState("error");
       return;
@@ -196,6 +203,7 @@ export function SearchExperience({
 
           if (interpretedQuery.kind === "refinement") {
             setResults([]);
+            setResearchGroupResults([]);
             setRefinement(interpretedQuery);
             setSearchState("refinement");
             return;
@@ -237,6 +245,7 @@ export function SearchExperience({
       }
 
       let displayedResults = payload.results;
+      const displayedResearchGroups = payload.researchGroups ?? [];
 
       if (
         chatClient &&
@@ -263,13 +272,19 @@ export function SearchExperience({
       }
 
       setResults(displayedResults);
-      setSearchState(displayedResults.length > 0 ? "results" : "empty");
+      setResearchGroupResults(displayedResearchGroups);
+      setSearchState(
+        displayedResults.length + displayedResearchGroups.length > 0
+          ? "results"
+          : "empty",
+      );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
 
       setResults([]);
+      setResearchGroupResults([]);
       setMessage(
         error instanceof Error
           ? error.message
@@ -452,18 +467,44 @@ export function SearchExperience({
         {searchState === "results" && (
           <section className="results" aria-label="Search results">
             <p className="resultCount" role="status">
-              {results.length} relevant {results.length === 1 ? "person" : "people"}
+              {results.length + researchGroupResults.length} relevant{" "}
+              {results.length + researchGroupResults.length === 1
+                ? results.length === 1
+                  ? "person"
+                  : "research group"
+                : "results"}
+              {results.length > 0 && researchGroupResults.length > 0
+                ? `: ${results.length} ${results.length === 1 ? "person" : "people"} and ${researchGroupResults.length} ${researchGroupResults.length === 1 ? "research group" : "research groups"}`
+                : ""}
             </p>
-            <div className="resultList">
-              {results.map((result, index) => (
-                <SearchResult
-                  key={result.recommendationId}
-                  result={result}
-                  displayedPosition={index + 1}
-                  rankingMode={rankingMode}
-                />
-              ))}
-            </div>
+            {results.length > 0 && (
+              <section className="resultSection" aria-labelledby="people-results-title">
+                <h2 id="people-results-title">People</h2>
+                <div className="resultList">
+                  {results.map((result, index) => (
+                    <SearchResult
+                      key={result.recommendationId}
+                      result={result}
+                      displayedPosition={index + 1}
+                      rankingMode={rankingMode}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+            {researchGroupResults.length > 0 && (
+              <section
+                className="resultSection researchGroupResults"
+                aria-labelledby="group-results-title"
+              >
+                <h2 id="group-results-title">Research groups</h2>
+                <div className="researchGroupResultList">
+                  {researchGroupResults.map((result) => (
+                    <ResearchGroupSearchResult key={result.id} result={result} />
+                  ))}
+                </div>
+              </section>
+            )}
           </section>
         )}
       </div>

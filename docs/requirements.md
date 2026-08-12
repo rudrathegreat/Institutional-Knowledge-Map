@@ -4,7 +4,7 @@
 
 The product contains three complementary user workflows:
 
-> **Enter a query and receive relevant people with concise, grounded explanations.**
+> **Enter a query and receive relevant people and research groups with concise, grounded explanations.**
 
 > **Browse all people and open a detailed profile grounded in stored researcher data.**
 
@@ -67,7 +67,7 @@ Searchable fields must include:
 
 The browser may ask Puter to interpret an ordinary-language query into terms selected from a server-derived expertise vocabulary. The model must be explicitly configured as `google/gemini-3.1-flash-lite` with temperature zero.
 
-The vocabulary must be derived from stored titles, roles, research areas, methods, instruments, software, and keywords. Proposed terms must be validated in both browser and server trust boundaries.
+The vocabulary must be derived from stored person titles, roles, research areas, methods, instruments, software, and keywords plus curated research-group focus areas. Group names and summary prose remain raw-query fields and are not expansion vocabulary. Proposed terms must be validated in both browser and server trust boundaries.
 
 When a query has two or three materially different meanings that would change which people are relevant, Puter may return one concise refinement question before retrieval. Each option must provide distinct validated vocabulary terms and a self-contained refined query. Selecting an option updates the primary search input; the user must explicitly submit it. Clear searches must not be interrupted, and a refined submission must not trigger another follow-up unless the user edits it.
 
@@ -87,7 +87,7 @@ When a query has two or three materially different meanings that would change wh
 
 The application must combine raw-query lexical evidence with validated expanded-term evidence.
 
-Exact researcher-name matches must always precede expansion matches. Expanded-term scores contribute at `0.35 ×` their accumulated lexical score.
+Exact person-name and group-name matches must always precede expansion matches within their own result type. Expanded-term scores contribute at `0.35 ×` their accumulated lexical score. People and groups are ranked independently so a group cannot displace a person.
 
 After retrieval, a successful candidate-constrained Puter call may reorder the complete server result set for the specific query. Curated profile fields remain primary evidence; recent publication titles and dates may corroborate current relevance or distinguish close candidates. An exact researcher-name match must remain first regardless of the proposed model order.
 
@@ -102,7 +102,7 @@ After retrieval, a successful candidate-constrained Puter call may reorder the c
 
 ## FR-005 — Search Results
 
-The response must display a small ranked list of relevant people.
+The response must display separate people-first sections: up to five relevant people followed by up to two relevant research groups. A group-only match is a successful result, and the empty state appears only when neither section has matches.
 
 Each result must include at minimum:
 
@@ -115,6 +115,8 @@ Each result must include at minimum:
 - a collapsed `View matching evidence` disclosure containing only evidence that contributed to retrieval or ranking;
 - a `Suggested first contact` badge on the first result after a valid AI re-ranking response.
 
+Each research-group result must include its name, stable detail link, curated summary and focus areas, member count, deterministic relevance reason, and matching-evidence disclosure. AI re-ranking, outreach questions, suggestion badges, and recommendation feedback remain person-only.
+
 ### Acceptance tests
 
 - Every displayed result corresponds to a valid database record.
@@ -125,6 +127,8 @@ Each result must include at minimum:
 - Results remain usable when explanation generation is unavailable.
 - Literal-query matches and interpreted-term-only matches are labelled separately without duplicating evidence.
 - The disclosure supports pointer and keyboard interaction through native disclosure semantics.
+- People remain above groups after AI re-ranking, and group reasons and ordering remain deterministic.
+- Group detail pages list all primary and secondary members alphabetically with links to person profiles.
 
 ---
 
@@ -627,7 +631,7 @@ The repository should test:
 9. Puter interpretation and explanation failure fallbacks;
 10. unknown and duplicate model term/ID rejection;
 11. strict and fenced JSON model output validation;
-12. search results contain only database researchers;
+12. search results contain only database people and research groups;
 13. evidence payloads and the 20-per-minute IP rate limit;
 14. browser interpretation, topic, notice, and explanation rendering;
 15. suggested-question grounding, top-three placement, copying, and graceful omission;
@@ -652,7 +656,7 @@ and demonstrate:
 1. exact-name search;
 2. topic/method/instrument search;
 3. natural-language controlled query expansion;
-4. ranked researcher results;
+4. people-first ranked person and research-group results;
 5. short grounded AI explanations;
 6. grounded suggested questions with copy controls on the top three AI-ranked results;
 7. graceful raw-lexical and deterministic-reason fallback when Puter fails;

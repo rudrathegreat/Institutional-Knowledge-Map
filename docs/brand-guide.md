@@ -296,7 +296,7 @@ Selecting a choice replaces the text in the existing search input. Keep the choi
 
 Results should appear directly beneath or replace the initial empty space below the search bar.
 
-Use a clean vertical list.
+Use a clean vertical list split into a People section and, when available, a smaller Research groups section. Show people first even if a group is an exact query match. Group results use the same restrained separator treatment but include a small type label, summary, focus areas, member count, deterministic relevance reason, and evidence disclosure. Do not show suggested-contact, outreach-question, or feedback controls on group results.
 
 Example:
 

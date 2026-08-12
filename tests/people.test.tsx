@@ -46,6 +46,7 @@ describe("people directory and profiles", () => {
     expect(getPersonBySlug("maya-chen")?.researchGroups).toEqual([
       {
         id: "group_radio_pulsars",
+        slug: "radio-astronomy-pulsars",
         name: "Radio Astronomy & Pulsars",
         isPrimary: true,
       },
@@ -93,7 +94,9 @@ describe("people directory and profiles", () => {
     expect(
       screen.getByRole("heading", { name: "Research groups" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Radio Astronomy & Pulsars")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Radio Astronomy & Pulsars" }),
+    ).toHaveAttribute("href", "/groups/radio-astronomy-pulsars");
     expect(screen.getByText("Primary")).toBeInTheDocument();
     expect(screen.getByText("Mock ORCID iD")).toBeInTheDocument();
     expect(screen.getByText("0000-0000-DEMO-0001").closest("a")).toBeNull();

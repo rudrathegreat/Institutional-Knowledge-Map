@@ -40,7 +40,12 @@ export const researchers = sqliteTable("researchers", {
 
 export const researchGroups = sqliteTable("research_groups", {
   id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
   name: text("name").notNull().unique(),
+  summary: text("summary").notNull(),
+  researchAreas: text("research_areas_json", { mode: "json" })
+    .$type<string[]>()
+    .notNull(),
 });
 
 export const researcherGroupMemberships = sqliteTable(

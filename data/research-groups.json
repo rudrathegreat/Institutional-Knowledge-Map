@@ -1,8 +1,44 @@
 [
-  { "id": "group_radio_pulsars", "name": "Radio Astronomy & Pulsars" },
-  { "id": "group_transients", "name": "Transients & Multi-Messenger Astronomy" },
-  { "id": "group_galaxies", "name": "Galaxies & Cosmology" },
-  { "id": "group_gravity", "name": "Gravitational Waves & Relativity" },
-  { "id": "group_stars_planets", "name": "Stars, Planets & Star Formation" },
-  { "id": "group_data_methods", "name": "Data, Software & Research Methods" }
+  {
+    "id": "group_radio_pulsars",
+    "slug": "radio-astronomy-pulsars",
+    "name": "Radio Astronomy & Pulsars",
+    "summary": "The group studies pulsars and other compact radio sources through precision timing, propagation measurements, and radio observations.",
+    "researchAreas": ["pulsars", "radio astronomy", "neutron stars", "interstellar medium"]
+  },
+  {
+    "id": "group_transients",
+    "slug": "transients-multi-messenger-astronomy",
+    "name": "Transients & Multi-Messenger Astronomy",
+    "summary": "The group investigates short-lived and variable events using electromagnetic, gravitational-wave, and multi-messenger observations.",
+    "researchAreas": ["fast radio bursts", "radio transients", "multi-messenger astronomy", "time-domain astronomy"]
+  },
+  {
+    "id": "group_galaxies",
+    "slug": "galaxies-cosmology",
+    "name": "Galaxies & Cosmology",
+    "summary": "The group explores how galaxies form and evolve, how matter is distributed, and what large surveys reveal about cosmic history.",
+    "researchAreas": ["galaxy evolution", "cosmology", "large-scale structure", "extragalactic astronomy"]
+  },
+  {
+    "id": "group_gravity",
+    "slug": "gravitational-waves-relativity",
+    "name": "Gravitational Waves & Relativity",
+    "summary": "The group develops theory, models, and data-analysis methods for gravitational-wave sources and tests of relativistic gravity.",
+    "researchAreas": ["gravitational waves", "general relativity", "compact binaries", "black holes"]
+  },
+  {
+    "id": "group_stars_planets",
+    "slug": "stars-planets-star-formation",
+    "name": "Stars, Planets & Star Formation",
+    "summary": "The group studies stellar and planetary systems from their formation through later evolution using observations and physical modelling.",
+    "researchAreas": ["star formation", "stellar astrophysics", "exoplanets", "protoplanetary discs"]
+  },
+  {
+    "id": "group_data_methods",
+    "slug": "data-software-research-methods",
+    "name": "Data, Software & Research Methods",
+    "summary": "The group advances astronomical data analysis, research software, statistics, archives, and reproducible scientific workflows.",
+    "researchAreas": ["research software", "astronomical data", "statistical methods", "reproducible research", "FAIR data stewardship"]
+  }
 ]

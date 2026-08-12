@@ -37,6 +37,7 @@ const candidates: SearchResultPayload[] = [
     researchGroups: [
       {
         id: "transients-group",
+        slug: "transients-multi-messenger-astronomy",
         name: "Transients & Multi-Messenger Astronomy",
         isPrimary: true,
       },
@@ -94,6 +95,7 @@ const candidates: SearchResultPayload[] = [
     researchGroups: [
       {
         id: "radio-group",
+        slug: "radio-astronomy-pulsars",
         name: "Radio Astronomy & Pulsars",
         isPrimary: true,
       },
