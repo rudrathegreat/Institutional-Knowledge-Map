@@ -1455,6 +1455,127 @@ button:disabled {
   font-size: 13px;
 }
 
+.profileRelatedPeople {
+  padding: 42px 0 8px;
+}
+
+.profileRelatedPeople > header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.profileRelatedPeople > header p {
+  max-width: 620px;
+  margin: 9px 0 0;
+  color: var(--secondary-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.relatedPeopleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 28px;
+}
+
+.relatedPeopleCategory {
+  min-width: 0;
+}
+
+.relatedPeopleCategory > h3 {
+  margin: 0;
+  color: #484851;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.relatedPeopleList {
+  display: grid;
+  gap: 11px;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.relatedPersonCard {
+  min-width: 0;
+}
+
+.relatedPersonLink {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 13px;
+  padding: 16px;
+  color: inherit;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.relatedPersonLink:hover {
+  background: var(--subtle-background);
+  border-color: #cecef3;
+}
+
+.relatedPersonIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relatedPersonIdentity strong {
+  color: var(--primary-text);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.relatedPersonIdentity > span {
+  color: var(--secondary-text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.relatedPersonEvidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.relatedPersonEvidence li {
+  padding: 4px 7px;
+  color: #4e4e5a;
+  background: #f4f4fd;
+  border: 1px solid #dadaf2;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.relatedPeopleEmpty {
+  margin: 13px 0 0;
+  padding: 17px;
+  color: var(--secondary-text);
+  background: var(--subtle-background);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .groupFocusAreas {
   padding: 35px 0 39px;
   border-bottom: 1px solid var(--border);
@@ -2249,6 +2370,10 @@ button:disabled {
   }
 
   .profileFields {
+    grid-template-columns: 1fr;
+  }
+
+  .relatedPeopleGrid {
     grid-template-columns: 1fr;
   }
 

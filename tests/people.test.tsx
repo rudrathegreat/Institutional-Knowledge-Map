@@ -124,6 +124,53 @@ describe("people directory and profiles", () => {
     );
     expect(within(publicationSection!).queryAllByRole("link")).toHaveLength(0);
 
+    const relatedPeopleSection = screen
+      .getByRole("heading", { name: "People you could talk to" })
+      .closest("section");
+    expect(relatedPeopleSection).not.toBeNull();
+
+    const connectionSection = within(relatedPeopleSection!)
+      .getByRole("heading", { name: "Related by connection" })
+      .closest("section");
+    const contentSection = within(relatedPeopleSection!)
+      .getByRole("heading", { name: "Related by content" })
+      .closest("section");
+    expect(connectionSection).not.toBeNull();
+    expect(contentSection).not.toBeNull();
+
+    const connectionLinks = within(connectionSection!).getAllByRole("link");
+    expect(connectionLinks).toHaveLength(3);
+    expect(connectionLinks.map((link) => link.textContent)).toEqual([
+      expect.stringContaining("Daniel Brooks"),
+      expect.stringContaining("Priya Nair"),
+      expect.stringContaining("Sofia Alvarez"),
+    ]);
+    expect(connectionLinks[0]).toHaveAttribute(
+      "href",
+      "/people/daniel-brooks",
+    );
+    expect(connectionLinks[0]).toHaveTextContent(
+      "Shared group: Radio Astronomy & Pulsars",
+    );
+
+    const contentLinks = within(contentSection!).getAllByRole("link");
+    expect(contentLinks).toHaveLength(3);
+    expect(contentLinks.map((link) => link.textContent)).toEqual([
+      expect.stringContaining("Oscar Webb"),
+      expect.stringContaining("Farah Wilson"),
+      expect.stringContaining("Aisha Rahman"),
+    ]);
+    expect(contentLinks[0]).toHaveAttribute(
+      "href",
+      "/people/oscar-webb",
+    );
+    expect(contentLinks[0]).toHaveTextContent(
+      "Shared research area: radio astronomy",
+    );
+    expect(
+      within(relatedPeopleSection!).queryByRole("link", { name: /Maya Chen/ }),
+    ).not.toBeInTheDocument();
+
     await expect(
       generateMetadata({
         params: Promise.resolve({ slug: "maya-chen" }),

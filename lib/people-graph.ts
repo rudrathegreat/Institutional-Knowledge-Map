@@ -1,17 +1,14 @@
 import type { Researcher, ResearchGroup } from "@/db/schema";
 import type { ResearchGroupSummary } from "@/lib/api-types";
+import {
+  compareSharedExpertise,
+  findGenericExpertiseEvidence,
+  type SharedEvidence,
+  type SharedExpertiseCategory,
+} from "@/lib/shared-expertise";
 
-export type GraphEvidenceCategory =
-  | "research area"
-  | "method"
-  | "keyword"
-  | "instrument"
-  | "software";
-
-export interface SharedEvidence {
-  category: GraphEvidenceCategory;
-  label: string;
-}
+export type GraphEvidenceCategory = SharedExpertiseCategory;
+export type { SharedEvidence } from "@/lib/shared-expertise";
 
 export interface PeopleGraphNode {
   id: string;
@@ -47,41 +44,12 @@ type GraphResearcher = Researcher & {
   researchGroups?: ResearchGroupSummary[];
 };
 
-type ResearcherListField =
-  | "researchAreas"
-  | "methods"
-  | "keywords"
-  | "instruments"
-  | "software";
-
-interface EvidenceField {
-  field: ResearcherListField;
-  category: GraphEvidenceCategory;
-  weight: number;
-}
-
 interface CandidateEdge extends PeopleGraphEdge {
   sourceName: string;
   targetName: string;
 }
 
-const EVIDENCE_FIELDS: EvidenceField[] = [
-  { field: "researchAreas", category: "research area", weight: 5 },
-  { field: "methods", category: "method", weight: 4 },
-  { field: "keywords", category: "keyword", weight: 3 },
-  { field: "instruments", category: "instrument", weight: 2 },
-  { field: "software", category: "software", weight: 1 },
-];
-
 const CONNECTIONS_PER_PERSON = 2;
-
-function normalizeValue(value: string): string {
-  return value.trim().toLocaleLowerCase("en");
-}
-
-function evidenceKey(category: GraphEvidenceCategory, value: string): string {
-  return `${category}:${normalizeValue(value)}`;
-}
 
 function compareText(left: string, right: string): number {
   return left.localeCompare(right, "en");
@@ -91,51 +59,16 @@ function edgeId(leftId: string, rightId: string): string {
   return [leftId, rightId].sort(compareText).join("--");
 }
 
-function findGenericEvidence(researchers: Researcher[]): Set<string> {
-  const documentFrequency = new Map<string, number>();
-
-  for (const researcher of researchers) {
-    for (const { category, field } of EVIDENCE_FIELDS) {
-      const uniqueValues = new Set(
-        researcher[field].map((value) => evidenceKey(category, value)),
-      );
-
-      for (const key of uniqueValues) {
-        documentFrequency.set(key, (documentFrequency.get(key) ?? 0) + 1);
-      }
-    }
-  }
-
-  const genericEvidence = new Set<string>();
-  for (const [key, frequency] of documentFrequency) {
-    if (frequency > researchers.length / 2) {
-      genericEvidence.add(key);
-    }
-  }
-
-  return genericEvidence;
-}
-
 function buildCandidateEdge(
   left: Researcher,
   right: Researcher,
   genericEvidence: Set<string>,
 ): CandidateEdge | undefined {
-  const evidence: SharedEvidence[] = [];
-  let score = 0;
-
-  for (const { category, field, weight } of EVIDENCE_FIELDS) {
-    const rightValues = new Set(right[field].map(normalizeValue));
-    const sharedValues = left[field]
-      .filter((value) => rightValues.has(normalizeValue(value)))
-      .filter((value) => !genericEvidence.has(evidenceKey(category, value)))
-      .sort(compareText);
-
-    for (const label of sharedValues) {
-      evidence.push({ category, label });
-      score += weight;
-    }
-  }
+  const { score, evidence } = compareSharedExpertise(
+    left,
+    right,
+    genericEvidence,
+  );
 
   if (evidence.length === 0) {
     return undefined;
@@ -180,7 +113,7 @@ export function buildPeopleGraph(
     (left, right) =>
       compareText(left.name, right.name) || compareText(left.id, right.id),
   );
-  const genericEvidence = findGenericEvidence(sortedResearchers);
+  const genericEvidence = findGenericExpertiseEvidence(sortedResearchers);
   const candidates: CandidateEdge[] = [];
 
   for (let leftIndex = 0; leftIndex < sortedResearchers.length; leftIndex += 1) {

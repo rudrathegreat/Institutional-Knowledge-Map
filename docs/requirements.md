@@ -246,6 +246,8 @@ The application must provide an alphabetical directory containing every stored r
 
 Every researcher must have a stable, human-readable profile URL. Profiles must show the stored title, role, research-group affiliations, biography, research areas, methods, instruments, software, keywords, mock ORCID iD, and newest-first recent publications. Search-result names must link to the same profiles.
 
+The bottom of each profile must show up to three people related by shared research-group membership and up to three people related by shared structured expertise. Connection ranking distinguishes primary and secondary memberships. Content ranking reuses the Network's weighted research-area, method, keyword, instrument, and software overlap, including generic-value suppression. The current person is excluded, different people are preferred across categories, and strong dual matches may backfill a short content list. Recommendations and explanations are deterministic and must not use biography prose, publication titles, embeddings, or AI.
+
 ### Acceptance tests
 
 - Valid slugs resolve to the matching database researcher.
@@ -253,6 +255,8 @@ Every researcher must have a stable, human-readable profile URL. Profiles must s
 - Profile metadata identifies the person.
 - Slugs remain unique and deterministic across reseeding.
 - Mock ORCID iDs and papers are visibly disclosed as fictional prototype data and do not produce external links.
+- Related-person cards link to stable profiles, expose shared group or expertise evidence, and never display numerical ranking scores.
+- Related-person ordering is deterministic, excludes the current person, prefers distinct category results, and handles missing connection or content matches with a clear empty state.
 
 ---
 

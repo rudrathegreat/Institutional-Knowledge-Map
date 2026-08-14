@@ -58,6 +58,7 @@ The application always supplies an explicit model and temperature of zero. OpenA
 - Alphabetical directory of every stored researcher with shareable research-group, appointment-title, and research-area filters
 - Stable, human-readable profile URLs with detailed expertise information
 - Clearly labelled mock ORCID iDs and three newest-first fictional publications on every profile
+- Up to three deterministic profile recommendations by shared research-group connection and by shared structured expertise
 - Interactive people network grouped by each person's primary research-group tag, with shared faceted filters, all tags visible, and connections derived deterministically from shared profile fields
 - Name-based graph navigation, connection evidence, and profile links
 - Loading, validation, error, and empty-result states

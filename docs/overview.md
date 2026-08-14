@@ -130,9 +130,10 @@ The MVP contains only the following product features:
 9. Graceful fallback to non-AI search results when AI explanation generation fails.
 10. An alphabetical directory of all stored researchers.
 11. Detailed person profiles linked from the directory and search results.
-12. An interactive people network with database-backed research-group tags on each person and connections through shared stored expertise.
-13. Mock researcher data stored in a simple relational database.
-14. Anonymous `Helpful` / `Not relevant` feedback tied to a recommendation and its search context, without researcher ratings or immediate ranking changes.
+12. Deterministic profile recommendations separated into shared-group connections and shared structured expertise.
+13. An interactive people network with database-backed research-group tags on each person and connections through shared stored expertise.
+14. Mock researcher data stored in a simple relational database.
+15. Anonymous `Helpful` / `Not relevant` feedback tied to a recommendation and its search context, without researcher ratings or immediate ranking changes.
 
 ---
 

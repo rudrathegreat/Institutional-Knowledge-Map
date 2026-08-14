@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getPersonBySlug } from "@/lib/people";
+import { RelatedPeopleSection } from "@/components/RelatedPeople";
+import {
+  getPersonBySlug,
+  getRelatedPeopleByPersonId,
+} from "@/lib/people";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,6 +72,8 @@ export default async function PersonPage({ params }: PersonPageProps) {
   if (!person) {
     notFound();
   }
+
+  const relatedPeople = getRelatedPeopleByPersonId(person.id);
 
   return (
     <main className="profilePage">
@@ -147,6 +153,8 @@ export default async function PersonPage({ params }: PersonPageProps) {
           <ProfileField title="Software" items={person.software} />
           <ProfileField title="Keywords" items={person.keywords} />
         </div>
+
+        <RelatedPeopleSection {...relatedPeople} />
       </article>
     </main>
   );
